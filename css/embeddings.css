@@ -1,0 +1,80 @@
+.embeddings-container {
+  overflow-x: auto;
+}
+
+.embeddings-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.embeddings-header {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding-left: 80px;
+}
+
+.embeddings-header__dim {
+  width: 48px;
+  text-align: center;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.embedding-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.embedding-row.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.embedding-row__label {
+  width: 80px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--purple);
+  text-align: right;
+  padding-right: 0.75rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.embedding-row__cells {
+  display: flex;
+  gap: 4px;
+}
+
+.embedding-cell {
+  width: 44px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text);
+  transition: background-color 0.5s ease, transform 0.2s ease;
+  transform: scale(0);
+}
+
+.embedding-cell.visible {
+  transform: scale(1);
+}
+
+.embedding-cell:hover {
+  transform: scale(1.15);
+  z-index: 1;
+}

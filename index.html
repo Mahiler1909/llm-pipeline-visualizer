@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Generative Workflow</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/viz.css">
+  <link rel="stylesheet" href="css/input.css">
+  <link rel="stylesheet" href="css/info-panel.css">
+</head>
+<body>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-overlay__content">
+      <div class="loading-overlay__icon">&#129504;</div>
+      <h2 class="loading-overlay__title" id="loading-title">Cargando modelo...</h2>
+      <div class="loading-overlay__bar-track">
+        <div class="loading-overlay__bar-fill" id="loading-bar"></div>
+      </div>
+      <p class="loading-overlay__text" id="loading-text">Inicializando...</p>
+      <p class="loading-overlay__hint">Esto solo ocurre la primera vez. El modelo se guarda en cache.</p>
+    </div>
+  </div>
+
+  <!-- Sidebar open tab (visible when sidebar is hidden) -->
+  <button class="sidebar-tab" id="sidebar-open">&#9881;</button>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar__top">
+      <div class="model-info">
+        <h2 class="model-info__name" id="model-name">GPT-2</h2>
+        <div class="model-info__badges">
+          <span class="badge" id="badge-layers">12 capas</span>
+          <span class="badge" id="badge-dim">768d</span>
+          <span class="badge" id="badge-vocab">50,257 vocab</span>
+        </div>
+        <span class="model-info__params" id="badge-params">124M params</span>
+      </div>
+      <button class="sidebar__close" id="sidebar-close">&times;</button>
+    </div>
+
+    <div class="config" id="config">
+      <div class="config__group">
+        <label class="config__label">MODELO</label>
+        <select class="config__select" id="model-select">
+          <option value="onnx-community/distilgpt2-ONNX">DistilGPT-2 (82M)</option>
+          <option value="onnx-community/gpt2-ONNX" selected>GPT-2 (124M)</option>
+          <option value="onnx-community/gpt2-medium-ONNX">GPT-2 Medium (355M)</option>
+          <option value="onnx-community/gpt2-large-ONNX">GPT-2 Large (774M)</option>
+        </select>
+      </div>
+      <div class="config__group">
+        <label class="config__label">
+          TEMPERATURE: <span id="temp-value">1.00</span>
+          <span class="config__info" data-tooltip="Controla la aleatoriedad. Baja (0.1) = respuestas predecibles y repetitivas. Alta (2.0) = texto creativo y variado. Valor por defecto: 1.0">&#9432;</span>
+        </label>
+        <input type="range" class="config__slider" id="temp-slider" min="0.1" max="2" step="0.05" value="1">
+      </div>
+      <div class="config__group">
+        <label class="config__label">
+          TOP K: <span id="topk-value">10</span>
+          <span class="config__info" data-tooltip="Limita a los K tokens mas probables. Top-K=10 significa que solo los 10 mejores candidatos se consideran. Menor K = mas enfocado, Mayor K = mas diverso.">&#9432;</span>
+        </label>
+        <input type="range" class="config__slider" id="topk-slider" min="1" max="50" step="1" value="10">
+      </div>
+      <div class="config__group">
+        <label class="config__label">
+          TOP P: <span id="topp-value">0.90</span>
+          <span class="config__info" data-tooltip="Nucleus sampling: solo considera tokens cuya probabilidad acumulada no supere P. Top-P=0.9 usa el 90% mas probable. Complementa a Top-K para filtrar tokens poco probables.">&#9432;</span>
+        </label>
+        <input type="range" class="config__slider" id="topp-slider" min="0.1" max="1" step="0.05" value="0.9">
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main area -->
+  <main class="main">
+    <!-- Visualization -->
+    <div class="viz" id="viz">
+      <div class="viz__graph" id="graph">
+        <canvas class="viz__canvas" id="network-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Legend (simplified) -->
+    <div class="legend" id="legend" hidden>
+      <span class="legend__item"><span class="legend__dot" style="background:#4ea8de"></span>Tokens</span>
+      <span class="legend__item"><span class="legend__dot" style="background:#34d399"></span>Embeddings</span>
+      <span class="legend__item"><span class="legend__dot" style="background:#a78bfa"></span>Transformer</span>
+      <span class="legend__item"><span class="legend__dot" style="background:#f472b6"></span>Logits</span>
+      <span class="legend__item"><span class="legend__dot" style="background:#fbbf24"></span>Sampling</span>
+    </div>
+
+    <!-- Welcome state -->
+    <div class="welcome-state" id="welcome-state" hidden>
+      <div class="welcome-state__icon">&#129504;</div>
+      <h2 class="welcome-state__title">Visualizador de LLM</h2>
+      <p class="welcome-state__text">Escribe un prompt abajo y haz clic en <strong>Generar</strong> para ver c&oacute;mo un Large Language Model procesa texto paso a paso.</p>
+      <div class="welcome-state__flow">Texto &rarr; Tokens &rarr; Embeddings &rarr; Transformer &rarr; Logits &rarr; Sampling</div>
+      <p class="welcome-state__hint">Pasa el mouse sobre la visualizaci&oacute;n para aprender sobre cada etapa</p>
+    </div>
+
+    <!-- Zoom controls -->
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
+      <button class="zoom-btn" id="zoom-out" title="Zoom Out">&minus;</button>
+      <button class="zoom-btn" id="zoom-reset" title="Reset View">&#8635;</button>
+    </div>
+
+    <!-- Info panel (contextual education) -->
+    <div class="info-panel" id="info-panel" hidden>
+      <div class="info-panel__header">
+        <span class="info-panel__icon" id="info-icon"></span>
+        <span class="info-panel__title" id="info-title"></span>
+      </div>
+      <div class="info-panel__body" id="info-body"></div>
+    </div>
+  </main>
+
+  <!-- Bottom input area -->
+  <div class="input-area" id="input-area">
+    <div class="input-area__tokens" id="input-tokens"></div>
+    <div class="input-area__row">
+      <input type="text" class="input-area__input" id="query-input" placeholder="Escribe tu prompt aqu&iacute;..." value="The capital of Spain is" autocomplete="off">
+      <span class="input-area__count" id="token-count">0 tokens</span>
+    </div>
+    <div class="input-area__actions">
+      <button class="input-area__btn input-area__btn--generate" id="generate-btn">Generar</button>
+      <button class="input-area__btn input-area__btn--more" id="more-btn" disabled>+ M&aacute;s</button>
+      <button class="input-area__btn input-area__btn--auto" id="auto-btn" disabled>&#9654; Auto-generar</button>
+      <button class="input-area__btn input-area__btn--reset" id="reset-btn">&#8635;</button>
+      <span class="input-area__footer">
+        Modelo: <strong id="footer-model">GPT-2</strong> | Powered by
+        <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
+      </span>
+    </div>
+  </div>
+
+  <!-- Tooltip -->
+  <div class="tooltip" id="tooltip" hidden></div>
+  <!-- Heatmap tooltip -->
+  <div class="tooltip" id="heatmap-tooltip" hidden></div>
+
+  <!-- Embedding modal -->
+  <div class="modal-overlay" id="embedding-modal" hidden>
+    <div class="modal">
+      <div class="modal__header">
+        <h3 class="modal__title">Vector de &quot;<span id="modal-token-text"></span>&quot;</h3>
+        <span class="modal__badge" id="modal-token-id">ID: 0</span>
+        <button class="modal__close" id="modal-close">&times;</button>
+      </div>
+      <canvas class="modal__heatmap" id="modal-heatmap" width="384" height="384"></canvas>
+      <div class="modal__info">
+        <span>&#128161;</span>
+        <p id="modal-info-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js?v=8"></script>
+</body>
+</html>

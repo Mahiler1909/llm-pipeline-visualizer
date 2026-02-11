@@ -1,0 +1,83 @@
+/* ─── Info Panel (contextual educational panel) ─── */
+
+.info-panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 280px;
+  max-height: calc(100% - 24px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+  overflow-y: auto;
+  transition: opacity 0.25s ease;
+}
+
+.info-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-panel__icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.info-panel__title {
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  line-height: 1.3;
+}
+
+.info-panel__body {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.info-panel__text {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.info-panel__text strong {
+  color: var(--text-bright);
+  font-weight: 600;
+}
+
+.info-panel__formula {
+  font-family: var(--font);
+  font-size: 0.72rem;
+  color: var(--accent);
+  background: rgba(167, 139, 250, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.15);
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.info-panel__detail {
+  font-family: var(--font);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  line-height: 1.5;
+}
+
+.info-panel__detail span {
+  color: var(--text);
+}
