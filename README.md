@@ -1,6 +1,10 @@
-# LLM Pipeline visualizer
+# LLM Pipeline Visualizer
 
 Interactive visualizer that shows step by step how a Large Language Model (GPT-2) processes text and generates the next word. Everything runs directly in the browser, no server required.
+
+**[Live Demo](https://mahiler1909.github.io/llm-pipeline-visualizer/)**
+
+![LLM Pipeline Visualizer](assets/screenshot.png)
 
 ## What it does
 
