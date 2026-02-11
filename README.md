@@ -1,4 +1,4 @@
-# AI Generative Workflow
+# LLM Pipeline visualizer
 
 Interactive visualizer that shows step by step how a Large Language Model (GPT-2) processes text and generates the next word. Everything runs directly in the browser, no server required.
 
