@@ -26,10 +26,22 @@ function safetensorsUrl(repo) {
   return `https://huggingface.co/${repo}/resolve/main/model.safetensors`;
 }
 
+const RETRIES = 3;
+
 async function fetchRange(url, start, end) {
-  const res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
-  if (!res.ok) throw new Error(`Range fetch fallo (${res.status})`);
-  return res.arrayBuffer();
+  let lastErr;
+  for (let attempt = 0; attempt < RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
+      if (!res.ok) throw new Error(`Range fetch fallo (${res.status})`);
+      return await res.arrayBuffer();
+    } catch (err) {
+      lastErr = err;
+      // Transient network error (e.g. saturated connection): back off and retry
+      await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
+    }
+  }
+  throw lastErr;
 }
 
 /**
