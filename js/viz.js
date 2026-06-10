@@ -61,6 +61,12 @@ let tooltip = null;
 // Embedding modal callback
 let onEmbeddingClick = null;
 
+// Layer click callback (transformer internals modal)
+let onLayerClickCb = null;
+
+// Real layer-0 attention for hover arcs: { seqLen, avg(i,j) }
+let attentionData = null;
+
 // Hover zone callback
 let onHoverZoneChange = null;
 let currentHoverZone = null;
@@ -121,6 +127,7 @@ export function build(tokens, modelConfig, predictions) {
   animProgress = 0;
   animTarget = 1;
   currentModelCfg = modelConfig;
+  attentionData = null; // stale for the new sequence until app recomputes it
 
   const numTokens = tokens.length;
   const numLayers = modelConfig.layers;
@@ -340,6 +347,46 @@ function draw() {
   }
 
   ctx.globalAlpha = 1;
+
+  // Real layer-0 attention arcs over the token column (on hover)
+  if (attentionData && hoveredNode && hoveredNode.index != null &&
+      (hoveredNode.type === 'token' || hoveredNode.type === 'embedding' || hoveredNode.type === 'transformer')) {
+    const i = hoveredNode.index;
+    const tokenCol = columns[0];
+    if (i < attentionData.seqLen && tokenCol && tokenCol.nodes[i]) {
+      const src = tokenCol.nodes[i];
+      for (let j = 0; j < i; j++) {
+        const w = attentionData.avg(i, j);
+        if (w < 0.01) continue;
+        const dst = tokenCol.nodes[j];
+        const spread = 30 + Math.abs(src.y - dst.y) * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(src.x - NODE_RADIUS, src.y);
+        ctx.quadraticCurveTo(src.x - spread - 40, (src.y + dst.y) / 2, dst.x - NODE_RADIUS, dst.y);
+        ctx.strokeStyle = '#fbbf24';
+        ctx.globalAlpha = 0.15 + w * 0.85;
+        ctx.lineWidth = 1 + w * 5;
+        ctx.stroke();
+      }
+      // Self-attention shown as a ring around the hovered token
+      const selfW = attentionData.avg(i, i);
+      if (selfW > 0.01) {
+        ctx.beginPath();
+        ctx.arc(src.x, src.y, NODE_RADIUS + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = '#fbbf24';
+        ctx.globalAlpha = 0.15 + selfW * 0.85;
+        ctx.lineWidth = 1 + selfW * 3;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 0.8;
+      ctx.font = '9px monospace';
+      ctx.fillStyle = '#fbbf24';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('atencion real (capa 1)', src.x + 12, src.y - 8);
+      ctx.globalAlpha = 1;
+    }
+  }
 
   // Draw nodes
   for (let c = 0; c < totalCols; c++) {
@@ -764,7 +811,10 @@ function getTooltipText(node) {
              `<b>Posicion:</b> token ${node.index + 1}<br>` +
              `<b>Atencion:</b> ${heads} cabezas<br>` +
              `<b>FFN:</b> ${dim}→${ffn}→${dim}<br>` +
-             `<span style="color:#8b949e">Self-attention + feed-forward network</span>`;
+             `<span style="color:#8b949e">Self-attention + feed-forward network</span><br>` +
+             (node.layer === 0
+               ? `<span style="color:#a78bfa">Click para ver la atencion REAL de esta capa</span>`
+               : `<span style="color:#a78bfa">Click para ver el interior de la capa</span>`);
 
     case 'logit':
       return `<b>${node.word}</b><br>` +
@@ -807,6 +857,22 @@ function handleClick(e) {
   if (hoveredNode.type === 'embedding' && onEmbeddingClick) {
     onEmbeddingClick(hoveredNode.id, hoveredNode.tokenText);
   }
+  if (hoveredNode.type === 'transformer' && onLayerClickCb) {
+    onLayerClickCb(hoveredNode.layer);
+  }
+}
+
+export function onLayerClick(cb) {
+  onLayerClickCb = cb;
+}
+
+/**
+ * Set real layer-0 attention data ({ seqLen, avg(i,j) }) to enable
+ * hover arcs over the token column. Pass null to disable.
+ */
+export function setAttention(data) {
+  attentionData = data;
+  draw();
 }
 
 // ─── Token Travel Animation (autoregressive) ───
@@ -889,6 +955,7 @@ export function clear() {
   travelParticle = null;
   hoveredNode = null;
   currentModelCfg = null;
+  attentionData = null;
   animProgress = 0;
   if (ctx) {
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);

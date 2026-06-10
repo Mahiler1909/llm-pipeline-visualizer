@@ -163,6 +163,53 @@
     </div>
   </div>
 
+  <!-- Layer internals modal -->
+  <div class="modal-overlay" id="layer-modal" hidden>
+    <div class="modal modal--wide">
+      <div class="modal__header">
+        <h3 class="modal__title" id="layer-title">Interior de la capa 1</h3>
+        <span class="modal__badge" id="layer-badge" hidden></span>
+        <button class="modal__close" id="layer-close">&times;</button>
+      </div>
+
+      <div class="layer-diagram" id="layer-diagram">
+        <div class="ld__box">Entrada</div>
+        <span class="ld__arrow">&rarr;</span>
+        <div class="ld__box ld__box--ln">LayerNorm</div>
+        <span class="ld__arrow">&rarr;</span>
+        <div class="ld__box ld__box--attn" id="ld-attn">Multi-Head<br>Attention</div>
+        <span class="ld__arrow ld__arrow--res" title="Conexion residual: la entrada se suma a la salida">&oplus;</span>
+        <div class="ld__box ld__box--ln">LayerNorm</div>
+        <span class="ld__arrow">&rarr;</span>
+        <div class="ld__box ld__box--ffn" id="ld-ffn">FFN<br>768&rarr;3072&rarr;768</div>
+        <span class="ld__arrow ld__arrow--res" title="Conexion residual: la entrada se suma a la salida">&oplus;</span>
+        <div class="ld__box">Salida</div>
+      </div>
+
+      <div class="layer-progress" id="layer-progress" hidden>
+        <p class="layer-progress__text" id="layer-progress-text">Descargando pesos reales de la capa 1...</p>
+        <div class="loading-overlay__bar-track">
+          <div class="loading-overlay__bar-fill" id="layer-progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="layer-attn" id="layer-attn" hidden>
+        <div class="layer-attn__controls">
+          <label class="layer-attn__label">Cabeza de atenci&oacute;n:
+            <select class="config__select layer-attn__select" id="head-select"></select>
+          </label>
+          <span class="layer-attn__hint">Fila = token que mira &middot; Columna = token mirado</span>
+        </div>
+        <canvas class="modal__heatmap modal__heatmap--smooth" id="attn-heatmap" width="460" height="460"></canvas>
+      </div>
+
+      <div class="modal__info">
+        <span>&#128161;</span>
+        <p id="layer-info-text"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Similarity modal -->
   <div class="modal-overlay" id="similarity-modal" hidden>
     <div class="modal modal--wide">
@@ -179,6 +226,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=9"></script>
+  <script type="module" src="js/app.js?v=10"></script>
 </body>
 </html>

@@ -7,6 +7,7 @@ import * as models from './models.js';
 import * as pipeline from './pipeline.js';
 import * as config from './config.js';
 import * as viz from './viz.js';
+import * as attention from './attention.js';
 import { getTokenColor, cosineSimilarity } from './utils.js';
 
 // ─── DOM Elements ───
@@ -63,6 +64,20 @@ const simCanvas = $('sim-canvas');
 const simClose = $('sim-close');
 const simBadge = $('sim-badge');
 const simInfoText = $('sim-info-text');
+
+const layerModal = $('layer-modal');
+const layerTitle = $('layer-title');
+const layerBadge = $('layer-badge');
+const layerClose = $('layer-close');
+const ldAttn = $('ld-attn');
+const ldFfn = $('ld-ffn');
+const layerProgress = $('layer-progress');
+const layerProgressText = $('layer-progress-text');
+const layerProgressBar = $('layer-progress-bar');
+const layerAttn = $('layer-attn');
+const headSelect = $('head-select');
+const attnHeatmap = $('attn-heatmap');
+const layerInfoText = $('layer-info-text');
 
 const zoomInBtn = $('zoom-in');
 const zoomOutBtn = $('zoom-out');
@@ -182,6 +197,9 @@ async function runPipeline() {
     moreBtn.disabled = false;
     autoBtn.disabled = false;
     simBtn.disabled = result.tokens.length < 2;
+
+    // Real attention arcs (cheap recompute; only if weights already downloaded)
+    refreshAttention();
   } catch (err) {
     console.error('[app] pipeline error:', err);
   } finally {
@@ -534,6 +552,239 @@ function handleSimHover(e) {
   drawSimilarityMatrix(i, j);
 }
 
+// ─── Layer Modal (transformer internals + real layer-0 attention) ───
+
+const ATTN_MARGIN = 78;
+let attnResult = null;   // result of attention.computeAttention for current tokens
+let attnLabels = [];
+let attnRequestId = 0;
+let currentHeadIdx = -1; // -1 = average of all heads
+let attnListenersAdded = false;
+
+/**
+ * Recompute real layer-0 attention for the current tokens (only if the
+ * weights are already downloaded) and feed the hover arcs in the canvas.
+ */
+async function refreshAttention() {
+  const modelId = models.getLoadedModelId();
+  const cfg = models.getConfig(modelId);
+  const tokens = pipeline.getLastTokens();
+  if (!cfg || !tokens || tokens.length === 0 || !attention.isLoaded(modelId)) return;
+
+  const requestId = ++attnRequestId;
+  try {
+    const result = await attention.computeAttention(modelId, tokens.map(t => t.id), cfg.heads);
+    if (requestId !== attnRequestId) return;
+    attnResult = result;
+    attnLabels = tokens.map(t => t.text.trim() || '⎵');
+    viz.setAttention({ seqLen: result.seqLen, avg: (i, j) => result.avg(i, j) });
+    if (!layerModal.hidden && !layerAttn.hidden) drawAttnHeatmap(currentHeadIdx, -1, -1);
+  } catch (err) {
+    console.warn('[app] no se pudo calcular la atencion:', err);
+  }
+}
+
+async function showLayerModal(layerIdx) {
+  const modelId = models.getLoadedModelId();
+  const cfg = models.getConfig(modelId);
+  if (!cfg) return;
+
+  layerTitle.textContent = `Interior de la capa ${layerIdx + 1} de ${cfg.layers}`;
+  ldAttn.innerHTML = `Multi-Head<br>Attention (${cfg.heads} cabezas)`;
+  ldFfn.innerHTML = `FFN<br>${cfg.hidden_dim}&rarr;${cfg.ffn_dim}&rarr;${cfg.hidden_dim}`;
+  layerProgress.hidden = true;
+  layerAttn.hidden = true;
+  layerBadge.hidden = true;
+  layerModal.hidden = false;
+
+  if (layerIdx > 0) {
+    layerInfoText.textContent =
+      `Todas las capas comparten esta estructura: la atencion mezcla informacion entre tokens y el FFN la procesa. ` +
+      `Esta capa opera sobre la salida de la capa ${layerIdx}. Por limites del modelo ONNX, ` +
+      `los valores REALES de atencion solo se calculan para la capa 1 (haz click en la columna L1).`;
+    return;
+  }
+
+  layerInfoText.textContent =
+    'La matriz muestra cuanto "mira" cada token (fila) a cada token anterior (columna). ' +
+    'Es la atencion REAL de la capa 1, calculada en tu navegador con los pesos originales de GPT-2. ' +
+    'El triangulo superior esta vacio por la mascara causal: un token no puede mirar al futuro.';
+
+  // Lazy one-time download of the layer-0 weights (~7MB for GPT-2)
+  if (!attention.isLoaded(modelId)) {
+    layerProgress.hidden = false;
+    layerProgressBar.style.width = '0%';
+    layerProgressText.textContent = 'Descargando pesos reales de la capa 1...';
+    try {
+      await attention.loadLayer0(modelId, ({ loaded, total }) => {
+        layerProgressBar.style.width = ((loaded / total) * 100).toFixed(1) + '%';
+        layerProgressText.textContent =
+          `Descargando pesos reales de la capa 1... ${(loaded / 1048576).toFixed(1)} / ${(total / 1048576).toFixed(1)} MB`;
+      });
+    } catch (err) {
+      console.warn('[app] descarga de pesos fallo:', err);
+      layerProgress.hidden = true;
+      layerBadge.hidden = false;
+      layerBadge.textContent = 'SIN DATOS';
+      layerBadge.className = 'modal__badge modal__badge--sim';
+      layerInfoText.textContent =
+        'No se pudieron descargar los pesos reales desde HuggingFace (revisa tu conexion). ' +
+        'El diagrama de arriba muestra la estructura de la capa de todas formas.';
+      return;
+    }
+    layerProgressText.textContent = 'Calculando atencion...';
+  }
+
+  await refreshAttention();
+  layerProgress.hidden = true;
+  if (layerModal.hidden) return;
+
+  if (!attnResult) {
+    layerBadge.hidden = false;
+    layerBadge.textContent = 'SIN DATOS';
+    layerBadge.className = 'modal__badge modal__badge--sim';
+    layerInfoText.textContent = 'Genera un prompt primero para calcular la atencion sobre sus tokens.';
+    return;
+  }
+
+  layerBadge.hidden = false;
+  layerBadge.textContent = 'REAL';
+  layerBadge.className = 'modal__badge modal__badge--real';
+
+  populateHeadSelect(cfg.heads);
+  layerAttn.hidden = false;
+  drawAttnHeatmap(currentHeadIdx, -1, -1);
+
+  if (!attnListenersAdded) {
+    attnHeatmap.addEventListener('mousemove', handleAttnHover);
+    attnHeatmap.addEventListener('mouseleave', () => {
+      heatmapTooltip.hidden = true;
+      if (attnResult) drawAttnHeatmap(currentHeadIdx, -1, -1);
+    });
+    attnListenersAdded = true;
+  }
+}
+
+function populateHeadSelect(heads) {
+  if (headSelect.options.length !== heads + 1) {
+    headSelect.innerHTML = '';
+    const avg = document.createElement('option');
+    avg.value = '-1';
+    avg.textContent = 'Promedio de todas';
+    headSelect.appendChild(avg);
+    for (let h = 0; h < heads; h++) {
+      const o = document.createElement('option');
+      o.value = String(h);
+      o.textContent = `Head ${h + 1}`;
+      headSelect.appendChild(o);
+    }
+    currentHeadIdx = -1;
+  }
+  headSelect.value = String(currentHeadIdx);
+}
+
+function attnColor(w) {
+  const t = Math.sqrt(Math.min(Math.max(w, 0), 1));
+  return `rgb(${Math.round(26 + t * 141)},${Math.round(26 + t * 113)},${Math.round(46 + t * 204)})`;
+}
+
+function drawAttnHeatmap(headIdx, hi, hj) {
+  if (!attnResult) return;
+  const n = attnResult.seqLen;
+  const ctx = attnHeatmap.getContext('2d');
+  const size = attnHeatmap.width;
+  const cell = (size - ATTN_MARGIN) / n;
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (j > i) {
+        ctx.fillStyle = '#11141c'; // causal mask: future is unreachable
+      } else {
+        const w = headIdx < 0 ? attnResult.avg(i, j) : attnResult.get(headIdx, i, j);
+        ctx.fillStyle = attnColor(w);
+      }
+      ctx.fillRect(ATTN_MARGIN + j * cell, ATTN_MARGIN + i * cell, cell - 1, cell - 1);
+    }
+  }
+
+  // Values inside cells when readable
+  if (cell >= 34) {
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j <= i; j++) {
+        const w = headIdx < 0 ? attnResult.avg(i, j) : attnResult.get(headIdx, i, j);
+        ctx.fillStyle = w > 0.45 ? '#0d1117' : '#c9d1d9';
+        ctx.fillText(w.toFixed(2), ATTN_MARGIN + j * cell + cell / 2, ATTN_MARGIN + i * cell + cell / 2);
+      }
+    }
+  }
+
+  // Axis labels
+  ctx.font = '10px monospace';
+  const maxLabel = 9;
+  for (let i = 0; i < n; i++) {
+    const text = attnLabels[i].length > maxLabel ? attnLabels[i].slice(0, maxLabel) + '…' : attnLabels[i];
+    const active = i === hi || i === hj;
+    ctx.fillStyle = active ? '#fbbf24' : '#8b949e';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, ATTN_MARGIN - 6, ATTN_MARGIN + i * cell + cell / 2);
+    ctx.save();
+    ctx.translate(ATTN_MARGIN + i * cell + cell / 2, ATTN_MARGIN - 6);
+    ctx.rotate(-Math.PI / 4);
+    ctx.textAlign = 'left';
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+
+  if (hi >= 0 && hj >= 0) {
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ATTN_MARGIN + hj * cell - 0.5, ATTN_MARGIN + hi * cell - 0.5, cell, cell);
+  }
+}
+
+function handleAttnHover(e) {
+  if (!attnResult) return;
+  const rect = attnHeatmap.getBoundingClientRect();
+  const scale = attnHeatmap.width / rect.width;
+  const mx = (e.clientX - rect.left) * scale;
+  const my = (e.clientY - rect.top) * scale;
+  const n = attnResult.seqLen;
+  const cell = (attnHeatmap.width - ATTN_MARGIN) / n;
+  const j = Math.floor((mx - ATTN_MARGIN) / cell);
+  const i = Math.floor((my - ATTN_MARGIN) / cell);
+
+  if (i < 0 || j < 0 || i >= n || j >= n) {
+    heatmapTooltip.hidden = true;
+    drawAttnHeatmap(currentHeadIdx, -1, -1);
+    return;
+  }
+
+  if (j > i) {
+    heatmapTooltip.innerHTML =
+      `<b>Mascara causal</b><br>` +
+      `<span style="color:#8b949e">"${attnLabels[i]}" no puede mirar a "${attnLabels[j]}":<br>esta en el futuro de la secuencia</span>`;
+  } else {
+    const w = currentHeadIdx < 0 ? attnResult.avg(i, j) : attnResult.get(currentHeadIdx, i, j);
+    heatmapTooltip.innerHTML =
+      `<b>"${attnLabels[i]}"</b> atiende a <b>"${attnLabels[j]}"</b><br>` +
+      `<span style="color:#a78bfa; font-size:1.1em; font-weight:700">${(w * 100).toFixed(1)}%</span><br>` +
+      `<span style="color:#8b949e">${currentHeadIdx < 0 ? 'Promedio de las cabezas' : 'Head ' + (currentHeadIdx + 1)} &middot; cada fila suma 100%</span>`;
+  }
+  heatmapTooltip.style.left = (e.clientX + 16) + 'px';
+  heatmapTooltip.style.top = (e.clientY - 14) + 'px';
+  heatmapTooltip.hidden = false;
+
+  drawAttnHeatmap(currentHeadIdx, i, j);
+}
+
 // ─── Info Panel (contextual education) ───
 
 const INFO_CARDS = {
@@ -776,6 +1027,18 @@ function setupEvents() {
   modalClose.addEventListener('click', () => { embeddingModal.hidden = true; heatmapTooltip.hidden = true; });
   embeddingModal.addEventListener('click', (e) => {
     if (e.target === embeddingModal) { embeddingModal.hidden = true; heatmapTooltip.hidden = true; }
+  });
+
+  viz.onLayerClick((layerIdx) => {
+    showLayerModal(layerIdx).catch(err => console.error('[app] layer modal error:', err));
+  });
+  layerClose.addEventListener('click', () => { layerModal.hidden = true; heatmapTooltip.hidden = true; });
+  layerModal.addEventListener('click', (e) => {
+    if (e.target === layerModal) { layerModal.hidden = true; heatmapTooltip.hidden = true; }
+  });
+  headSelect.addEventListener('change', () => {
+    currentHeadIdx = parseInt(headSelect.value, 10);
+    drawAttnHeatmap(currentHeadIdx, -1, -1);
   });
 
   simBtn.addEventListener('click', () => {
