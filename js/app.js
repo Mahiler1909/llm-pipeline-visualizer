@@ -21,11 +21,7 @@ const loadingBar = $('loading-bar');
 const loadingText = $('loading-text');
 
 const modelName = $('model-name');
-const badgeLayers = $('badge-layers');
-const badgeDim = $('badge-dim');
-const badgeVocab = $('badge-vocab');
-const badgeParams = $('badge-params');
-const footerModel = $('footer-model');
+const modelMeta = $('model-meta');
 
 const sidebarClose = $('sidebar-close');
 const sidebarOpen = $('sidebar-open');
@@ -89,12 +85,17 @@ const zoomResetBtn = $('zoom-reset');
 
 const autoBtn = $('auto-btn');
 
-// Info panel elements
-const infoPanel = $('info-panel');
+// Learn drawer + context pill elements
+const learnDrawer = $('learn-drawer');
+const learnClose = $('learn-close');
 const infoIcon = $('info-icon');
 const infoTitle = $('info-title');
 const infoBody = $('info-body');
-const legend = $('legend');
+const zonePill = $('zone-pill');
+const zonePillDot = $('zone-pill-dot');
+const zonePillTitle = $('zone-pill-title');
+const zonePillTag = $('zone-pill-tag');
+const distGroup = $('dist-group');
 
 // ─── Initialize ───
 
@@ -167,11 +168,7 @@ function updateModelInfo(modelId) {
   const cfg = models.MODEL_CONFIGS[modelId];
   if (!cfg) return;
   modelName.textContent = cfg.name;
-  badgeLayers.textContent = `${cfg.layers} capas`;
-  badgeDim.textContent = `${cfg.hidden_dim}d`;
-  badgeVocab.textContent = `${cfg.vocab_size.toLocaleString()} vocab`;
-  badgeParams.textContent = `${cfg.params} params`;
-  footerModel.textContent = cfg.name;
+  modelMeta.innerHTML = `${cfg.layers} capas &middot; ${cfg.hidden_dim}d &middot; ${cfg.params} params`;
 }
 
 // ─── Pipeline ───
@@ -199,6 +196,7 @@ async function runPipeline() {
     tokenCount.textContent = `${result.tokens.length} tokens`;
 
     viz.build(result.tokens, result.modelConfig, result.predictions);
+    distGroup.hidden = false;
     samplingPanel.update(pipeline.getDistribution());
     moreBtn.disabled = false;
     autoBtn.disabled = false;
@@ -797,6 +795,8 @@ const INFO_CARDS = {
   token: {
     icon: '\ud83d\udcdd',
     title: 'Tokens',
+    color: '#4ea8de',
+    tagline: 'El texto se corta en piezas con un ID numerico',
     getBasic(cfg) {
       return `
         <p class="info-panel__text">
@@ -828,6 +828,8 @@ const INFO_CARDS = {
   embedding: {
     icon: '\ud83d\udcca',
     title: 'Embeddings',
+    color: '#34d399',
+    tagline: 'Cada token se convierte en un vector con significado',
     getBasic(cfg) {
       const dim = cfg ? cfg.hidden_dim : 768;
       return `
@@ -864,6 +866,8 @@ const INFO_CARDS = {
   transformer: {
     icon: '\u26a1',
     title: 'Transformer',
+    color: '#a78bfa',
+    tagline: 'Cada token mira a los anteriores para entender el contexto',
     getBasic(cfg) {
       const layers = cfg ? cfg.layers : 12;
       return `
@@ -902,6 +906,8 @@ softmax(Q\u00b7K\u1d40/\u221ad<sub>k</sub>)\u00b7V</div>
   logit: {
     icon: '\ud83c\udfaf',
     title: 'Logits',
+    color: '#f472b6',
+    tagline: 'Un puntaje para cada palabra del vocabulario',
     getBasic(cfg) {
       const vocab = cfg ? cfg.vocab_size.toLocaleString() : '50,257';
       return `
@@ -931,6 +937,8 @@ softmax(Q\u00b7K\u1d40/\u221ad<sub>k</sub>)\u00b7V</div>
   sampling: {
     icon: '\ud83c\udfb2',
     title: 'Sampling',
+    color: '#fbbf24',
+    tagline: 'Elegir la siguiente palabra: azar controlado',
     getBasic(cfg) {
       return `
         <p class="info-panel__text">
@@ -965,30 +973,47 @@ softmax(Q\u00b7K\u1d40/\u221ad<sub>k</sub>)\u00b7V</div>
 let infoTab = 'basic';       // selected tab persists while moving between zones
 let currentInfoZone = null;
 let currentInfoCfg = null;
-let infoHideTimer = null;
-let infoPanelHover = false;
+let pillHideTimer = null;
+let pillHover = false;
 
-function updateInfoPanel(zone, modelCfg) {
+/**
+ * Hover over a pipeline zone: show a one-line context pill. The full
+ * educational card lives in the learn drawer, opened on demand from the
+ * pill (and kept in sync with the hovered zone while open).
+ */
+function updateZoneUI(zone, modelCfg) {
   const card = zone ? INFO_CARDS[zone] : null;
   if (card) {
-    clearTimeout(infoHideTimer);
+    clearTimeout(pillHideTimer);
     currentInfoZone = zone;
     currentInfoCfg = modelCfg;
-    infoIcon.textContent = card.icon;
-    infoTitle.textContent = card.title;
-    renderInfoBody(card, modelCfg);
-    infoPanel.hidden = false;
-    legend.hidden = false;
+
+    zonePillDot.style.background = card.color;
+    zonePillTitle.textContent = card.title;
+    zonePillTag.textContent = card.tagline;
+    zonePill.hidden = false;
+
+    if (!learnDrawer.hidden) renderLearnDrawer(card, modelCfg);
   } else {
-    // Delay the hide so the mouse can travel INTO the panel (tabs are clickable)
-    clearTimeout(infoHideTimer);
-    infoHideTimer = setTimeout(() => {
-      if (!infoPanelHover) {
-        infoPanel.hidden = true;
-        legend.hidden = true;
-      }
+    // Delay the hide so the mouse can travel INTO the pill to click it
+    clearTimeout(pillHideTimer);
+    pillHideTimer = setTimeout(() => {
+      if (!pillHover) zonePill.hidden = true;
     }, 350);
   }
+}
+
+function openLearnDrawer() {
+  const card = INFO_CARDS[currentInfoZone];
+  if (!card) return;
+  renderLearnDrawer(card, currentInfoCfg);
+  learnDrawer.hidden = false;
+}
+
+function renderLearnDrawer(card, cfg) {
+  infoIcon.textContent = card.icon;
+  infoTitle.textContent = card.title;
+  renderInfoBody(card, cfg);
 }
 
 function renderInfoBody(card, cfg) {
@@ -1015,7 +1040,8 @@ async function startAutoGenerate() {
 
   isAutoGenerating = true;
   autoGenAbort = false;
-  autoBtn.textContent = '\u23f9 Parar';
+  autoBtn.textContent = '\u23f9';
+  autoBtn.setAttribute('data-tooltip', 'Parar la generaci\u00f3n');
   autoBtn.classList.add('is-running');
   generateBtn.disabled = true;
   moreBtn.disabled = true;
@@ -1060,7 +1086,8 @@ async function startAutoGenerate() {
 function stopAutoGenerate() {
   autoGenAbort = true;
   isAutoGenerating = false;
-  autoBtn.textContent = '\u25b6 Auto-generar';
+  autoBtn.textContent = '\u25b6';
+  autoBtn.setAttribute('data-tooltip', 'Generar 8 tokens autom\u00e1ticamente');
   autoBtn.classList.remove('is-running');
   generateBtn.disabled = false;
   moreBtn.disabled = !pipeline.hasResults();
@@ -1100,25 +1127,29 @@ function setupEvents() {
     autoBtn.disabled = true;
     simBtn.disabled = true;
     samplingPanel.clear();
+    distGroup.hidden = true;
+    learnDrawer.hidden = true;
+    zonePill.hidden = true;
     hasGenerated = false;
     viz.clear();
     if (welcomeState) welcomeState.hidden = false;
     queryInput.focus();
   });
 
-  // Info panel: listen for hover zone changes on the canvas
-  viz.onHoverZone(updateInfoPanel);
+  // Context pill: follows the hovered zone; click opens the learn drawer
+  viz.onHoverZone(updateZoneUI);
 
-  // Keep the panel open while the mouse is over it (the tabs are clickable)
-  infoPanel.addEventListener('mouseenter', () => {
-    infoPanelHover = true;
-    clearTimeout(infoHideTimer);
+  zonePill.addEventListener('mouseenter', () => {
+    pillHover = true;
+    clearTimeout(pillHideTimer);
   });
-  infoPanel.addEventListener('mouseleave', () => {
-    infoPanelHover = false;
-    infoPanel.hidden = true;
-    legend.hidden = true;
+  zonePill.addEventListener('mouseleave', () => {
+    pillHover = false;
+    zonePill.hidden = true;
   });
+  zonePill.addEventListener('click', openLearnDrawer);
+
+  learnClose.addEventListener('click', () => { learnDrawer.hidden = true; });
 
   // Tab switching (Basico / Profundizar) via delegation
   infoBody.addEventListener('click', (e) => {
@@ -1127,6 +1158,14 @@ function setupEvents() {
     infoTab = btn.dataset.tab;
     const card = INFO_CARDS[currentInfoZone];
     if (card) renderInfoBody(card, currentInfoCfg);
+  });
+
+  // Welcome example prompts
+  document.querySelectorAll('.welcome-state__example').forEach(btn => {
+    btn.addEventListener('click', () => {
+      queryInput.value = btn.dataset.prompt;
+      runPipeline();
+    });
   });
 
   sidebarClose.addEventListener('click', () => {
@@ -1203,8 +1242,8 @@ function setupEvents() {
   zoomOutBtn.addEventListener('click', () => viz.zoomOut());
   zoomResetBtn.addEventListener('click', () => viz.resetView());
 
-  // Config info icons → reuse the global tooltip (lives outside sidebar overflow)
-  document.querySelectorAll('.config__info').forEach(icon => {
+  // Any element with data-tooltip → reuse the global tooltip (lives outside overflow)
+  document.querySelectorAll('[data-tooltip]').forEach(icon => {
     icon.addEventListener('mouseenter', (e) => {
       const text = icon.getAttribute('data-tooltip');
       if (!text) return;

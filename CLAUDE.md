@@ -17,7 +17,7 @@ Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transform
 **Data flow:** `app.js` orchestrates everything. User types text → `pipeline.js` calls `models.js` (tokenize + ONNX forward pass) → computes predictions with temperature/top-k/top-p → `viz.js` renders on Canvas.
 
 **Key modules:**
-- `js/app.js` — Entry point. Wires DOM, manages state, handles info panel content (INFO_CARDS with Básico/Profundizar tabs), embedding/similarity/layer modals, autoregressive generation loop
+- `js/app.js` — Entry point. Wires DOM, manages state, handles educational content (INFO_CARDS with tagline/color for the context pill + Básico/Profundizar tabs rendered in the learn drawer), embedding/similarity/layer modals, autoregressive generation loop
 - `js/pipeline.js` — ML pipeline: tokenize → forward → sampling. Caches logits AND predictions so slider changes recompute without re-inference (`recomputePredictions()`). `getDistribution()` feeds the live sampling panel. `greedy` config makes sampling deterministic
 - `js/models.js` — Transformers.js wrapper. MODEL_CONFIGS defines 4 GPT-2 variants with metadata (layers, hidden_dim, heads, etc). `getEmbeddingVectorAsync()` returns the REAL wte row (via weights.js) with seeded-random fallback
 - `js/weights.js` — Fetches real weights from HF Hub via HTTP Range requests over the original `model.safetensors` (header parsed once, rows fetched on demand, ~3KB/token). ONNX repo IDs map to original repos in REPO_MAP
@@ -30,7 +30,7 @@ Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transform
 
 ## Key Patterns
 
-- **Hover zones in viz.js:** 5 zones (token, embedding, transformer, logit, sampling) detected by column x-position ranges. Triggers `onHoverZoneChange` callback → app.js updates info panel and legend visibility
+- **Hover zones in viz.js:** 5 zones (token, embedding, transformer, logit, sampling) detected by column x-position ranges. Triggers `onHoverZoneChange` callback → app.js shows a one-line context pill (`#zone-pill`, bottom-center); clicking it opens the persistent learn drawer (`#learn-drawer`, right side) with the full INFO_CARDS content. The drawer stays open and follows zone changes
 - **Sidebar:** `position: fixed` with `transform: translateX` for collapse animation. Body class `sidebar-hidden` toggles grid from `260px 1fr` to `0 1fr`
 - **Autoregressive generation:** Loop in `startAutoGenerate()` checks `autoGenAbort` flag between each async step. `animateTokenTravel()` returns a Promise for sequencing
 - **Embedding heatmap:** Floating tooltip uses the global `#tooltip` element (positioned in body) to escape sidebar's `overflow` clipping

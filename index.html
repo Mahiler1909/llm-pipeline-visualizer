@@ -33,19 +33,14 @@
     <div class="sidebar__top">
       <div class="model-info">
         <h2 class="model-info__name" id="model-name">GPT-2</h2>
-        <div class="model-info__badges">
-          <span class="badge" id="badge-layers">12 capas</span>
-          <span class="badge" id="badge-dim">768d</span>
-          <span class="badge" id="badge-vocab">50,257 vocab</span>
-        </div>
-        <span class="model-info__params" id="badge-params">124M params</span>
+        <p class="model-info__meta" id="model-meta">12 capas &middot; 768d &middot; 124M params</p>
       </div>
-      <button class="sidebar__close" id="sidebar-close">&times;</button>
+      <button class="sidebar__close" id="sidebar-close" data-tooltip="Ocultar panel">&times;</button>
     </div>
 
     <div class="config" id="config">
       <div class="config__group">
-        <label class="config__label">MODELO</label>
+        <label class="config__label">Modelo</label>
         <select class="config__select" id="model-select">
           <option value="onnx-community/distilgpt2-ONNX">DistilGPT-2 (82M)</option>
           <option value="onnx-community/gpt2-ONNX" selected>GPT-2 (124M)</option>
@@ -53,39 +48,55 @@
           <option value="onnx-community/gpt2-large-ONNX">GPT-2 Large (774M)</option>
         </select>
       </div>
+
+      <hr class="sidebar__divider">
+
       <div class="config__group">
-        <label class="config__label">
-          TEMPERATURE: <span id="temp-value">1.00</span>
-          <span class="config__info" data-tooltip="Controla la aleatoriedad. Baja (0.1) = respuestas predecibles y repetitivas. Alta (2.0) = texto creativo y variado. Valor por defecto: 1.0">&#9432;</span>
-        </label>
+        <div class="config__row">
+          <label class="config__label">Temperature
+            <span class="config__info" data-tooltip="Controla la aleatoriedad. Baja (0.1) = respuestas predecibles y repetitivas. Alta (2.0) = texto creativo y variado.">&#9432;</span>
+          </label>
+          <span class="config__value" id="temp-value">1.00</span>
+        </div>
         <input type="range" class="config__slider" id="temp-slider" min="0.1" max="2" step="0.05" value="1">
       </div>
       <div class="config__group">
-        <label class="config__label">
-          TOP K: <span id="topk-value">10</span>
-          <span class="config__info" data-tooltip="Limita a los K tokens mas probables. Top-K=10 significa que solo los 10 mejores candidatos se consideran. Menor K = mas enfocado, Mayor K = mas diverso.">&#9432;</span>
-        </label>
+        <div class="config__row">
+          <label class="config__label">Top K
+            <span class="config__info" data-tooltip="Limita a los K tokens mas probables. Menor K = mas enfocado, mayor K = mas diverso.">&#9432;</span>
+          </label>
+          <span class="config__value" id="topk-value">10</span>
+        </div>
         <input type="range" class="config__slider" id="topk-slider" min="1" max="50" step="1" value="10">
       </div>
       <div class="config__group">
-        <label class="config__label">
-          TOP P: <span id="topp-value">0.90</span>
-          <span class="config__info" data-tooltip="Nucleus sampling: solo considera tokens cuya probabilidad acumulada no supere P. Top-P=0.9 usa el 90% mas probable. Complementa a Top-K para filtrar tokens poco probables.">&#9432;</span>
-        </label>
+        <div class="config__row">
+          <label class="config__label">Top P
+            <span class="config__info" data-tooltip="Nucleus sampling: solo considera tokens cuya probabilidad acumulada no supere P. Complementa a Top-K.">&#9432;</span>
+          </label>
+          <span class="config__value" id="topp-value">0.90</span>
+        </div>
         <input type="range" class="config__slider" id="topp-slider" min="0.1" max="1" step="0.05" value="0.9">
       </div>
-      <div class="config__group">
-        <label class="config__label">
-          DISTRIBUCI&Oacute;N EN VIVO
-          <span class="config__info" data-tooltip="Los 20 mejores candidatos al siguiente token. Mueve los sliders y observa: temperature aplana o afila las barras, top-k corta candidatos (linea punteada) y top-p define el nucleus (zona ambar). La &#9733; es el token elegido.">&#9432;</span>
-        </label>
+
+      <div class="config__group" id="dist-group" hidden>
+        <hr class="sidebar__divider">
+        <div class="config__row">
+          <label class="config__label">Siguiente token
+            <span class="config__info" data-tooltip="Los 20 mejores candidatos. Mueve los sliders y observa: temperature aplana o afila las barras, top-k corta (linea punteada) y top-p define el nucleus (zona ambar). La &#9733; es el elegido.">&#9432;</span>
+          </label>
+        </div>
         <canvas class="config__dist" id="dist-canvas" width="480" height="300"></canvas>
         <label class="config__toggle">
           <input type="checkbox" id="greedy-toggle">
-          <span>Greedy: elegir siempre el m&aacute;s probable</span>
+          <span>Greedy: siempre el m&aacute;s probable</span>
         </label>
       </div>
     </div>
+
+    <p class="sidebar__credit">GPT-2 real en tu navegador, v&iacute;a
+      <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
+    </p>
   </aside>
 
   <!-- Main area -->
@@ -97,58 +108,60 @@
       </div>
     </div>
 
-    <!-- Legend (simplified) -->
-    <div class="legend" id="legend" hidden>
-      <span class="legend__item"><span class="legend__dot" style="background:#4ea8de"></span>Tokens</span>
-      <span class="legend__item"><span class="legend__dot" style="background:#34d399"></span>Embeddings</span>
-      <span class="legend__item"><span class="legend__dot" style="background:#a78bfa"></span>Transformer</span>
-      <span class="legend__item"><span class="legend__dot" style="background:#f472b6"></span>Logits</span>
-      <span class="legend__item"><span class="legend__dot" style="background:#fbbf24"></span>Sampling</span>
-    </div>
-
     <!-- Welcome state -->
     <div class="welcome-state" id="welcome-state" hidden>
       <div class="welcome-state__icon">&#129504;</div>
-      <h2 class="welcome-state__title">Visualizador de LLM</h2>
-      <p class="welcome-state__text">Escribe un prompt abajo y haz clic en <strong>Generar</strong> para ver c&oacute;mo un Large Language Model procesa texto paso a paso.</p>
+      <h2 class="welcome-state__title">Mira pensar a un modelo de lenguaje</h2>
+      <p class="welcome-state__text">GPT-2 corre dentro de tu navegador. Escribe un prompt o elige uno y observa el camino completo hasta la siguiente palabra.</p>
       <div class="welcome-state__flow">Texto &rarr; Tokens &rarr; Embeddings &rarr; Transformer &rarr; Logits &rarr; Sampling</div>
-      <p class="welcome-state__hint">Pasa el mouse sobre la visualizaci&oacute;n para aprender sobre cada etapa</p>
+      <div class="welcome-state__examples">
+        <button class="welcome-state__example" data-prompt="The capital of Spain is">The capital of Spain is&hellip;</button>
+        <button class="welcome-state__example" data-prompt="Once upon a time, there was">Once upon a time&hellip;</button>
+        <button class="welcome-state__example" data-prompt="The meaning of life is">The meaning of life is&hellip;</button>
+      </div>
     </div>
 
     <!-- Zoom controls -->
     <div class="zoom-controls">
-      <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
-      <button class="zoom-btn" id="zoom-out" title="Zoom Out">&minus;</button>
-      <button class="zoom-btn" id="zoom-reset" title="Reset View">&#8635;</button>
+      <button class="zoom-btn" id="zoom-in" title="Acercar">+</button>
+      <button class="zoom-btn" id="zoom-out" title="Alejar">&minus;</button>
+      <button class="zoom-btn" id="zoom-reset" title="Centrar">&#8635;</button>
     </div>
 
-    <!-- Info panel (contextual education) -->
-    <div class="info-panel" id="info-panel" hidden>
-      <div class="info-panel__header">
-        <span class="info-panel__icon" id="info-icon"></span>
-        <span class="info-panel__title" id="info-title"></span>
+    <!-- Context pill: one line about the hovered stage -->
+    <button class="zone-pill" id="zone-pill" hidden>
+      <span class="zone-pill__dot" id="zone-pill-dot"></span>
+      <span class="zone-pill__title" id="zone-pill-title"></span>
+      <span class="zone-pill__tag" id="zone-pill-tag"></span>
+      <span class="zone-pill__cta">Saber m&aacute;s</span>
+    </button>
+
+    <!-- Learn drawer: full educational card, opens on demand -->
+    <aside class="learn-drawer" id="learn-drawer" hidden>
+      <div class="learn-drawer__header">
+        <span class="learn-drawer__icon" id="info-icon"></span>
+        <span class="learn-drawer__title" id="info-title"></span>
+        <button class="learn-drawer__close" id="learn-close">&times;</button>
       </div>
-      <div class="info-panel__body" id="info-body"></div>
-    </div>
+      <div class="learn-drawer__body" id="info-body"></div>
+    </aside>
   </main>
 
   <!-- Bottom input area -->
   <div class="input-area" id="input-area">
     <div class="input-area__tokens" id="input-tokens"></div>
     <div class="input-area__row">
-      <input type="text" class="input-area__input" id="query-input" placeholder="Escribe tu prompt aqu&iacute;..." value="The capital of Spain is" autocomplete="off">
-      <span class="input-area__count" id="token-count">0 tokens</span>
-    </div>
-    <div class="input-area__actions">
+      <div class="input-area__field">
+        <input type="text" class="input-area__input" id="query-input" placeholder="Escribe tu prompt aqu&iacute;..." value="The capital of Spain is" autocomplete="off">
+        <span class="input-area__count" id="token-count">0 tokens</span>
+      </div>
       <button class="input-area__btn input-area__btn--generate" id="generate-btn">Generar</button>
-      <button class="input-area__btn input-area__btn--more" id="more-btn" disabled>+ M&aacute;s</button>
-      <button class="input-area__btn input-area__btn--auto" id="auto-btn" disabled>&#9654; Auto-generar</button>
-      <button class="input-area__btn" id="sim-btn" disabled title="Matriz de similitud coseno entre los embeddings del prompt">&#8862; Similitud</button>
-      <button class="input-area__btn input-area__btn--reset" id="reset-btn">&#8635;</button>
-      <span class="input-area__footer">
-        Modelo: <strong id="footer-model">GPT-2</strong> | Powered by
-        <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
-      </span>
+      <div class="input-area__icons">
+        <button class="input-area__icon-btn" id="more-btn" disabled data-tooltip="A&ntilde;adir el token elegido (&#9733;) y volver a generar">+1</button>
+        <button class="input-area__icon-btn" id="auto-btn" disabled data-tooltip="Generar 8 tokens autom&aacute;ticamente">&#9654;</button>
+        <button class="input-area__icon-btn" id="sim-btn" disabled data-tooltip="Similitud coseno entre los embeddings del prompt">&#8862;</button>
+        <button class="input-area__icon-btn" id="reset-btn" data-tooltip="Limpiar todo">&#8635;</button>
+      </div>
     </div>
   </div>
 
@@ -237,6 +250,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=13"></script>
+  <script type="module" src="js/app.js?v=14"></script>
 </body>
 </html>
