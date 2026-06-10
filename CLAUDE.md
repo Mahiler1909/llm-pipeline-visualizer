@@ -17,10 +17,13 @@ Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transform
 **Data flow:** `app.js` orchestrates everything. User types text → `pipeline.js` calls `models.js` (tokenize + ONNX forward pass) → computes predictions with temperature/top-k/top-p → `viz.js` renders on Canvas.
 
 **Key modules:**
-- `js/app.js` — Entry point. Wires DOM, manages state, handles info panel content (INFO_CARDS), embedding modal, autoregressive generation loop
-- `js/pipeline.js` — ML pipeline: tokenize → forward → sampling. Caches logits so slider changes recompute without re-inference (`recomputePredictions()`)
-- `js/models.js` — Transformers.js wrapper. MODEL_CONFIGS defines 4 GPT-2 variants with metadata (layers, hidden_dim, heads, etc). Progress callback tracks bytes across multiple files for accurate loading bar
-- `js/viz.js` — Canvas rendering engine (largest file). Columns layout, glow animation loop, zoom/pan, hover zone detection, output probability bars, token travel animation
+- `js/app.js` — Entry point. Wires DOM, manages state, handles info panel content (INFO_CARDS with Básico/Profundizar tabs), embedding/similarity/layer modals, autoregressive generation loop
+- `js/pipeline.js` — ML pipeline: tokenize → forward → sampling. Caches logits AND predictions so slider changes recompute without re-inference (`recomputePredictions()`). `getDistribution()` feeds the live sampling panel. `greedy` config makes sampling deterministic
+- `js/models.js` — Transformers.js wrapper. MODEL_CONFIGS defines 4 GPT-2 variants with metadata (layers, hidden_dim, heads, etc). `getEmbeddingVectorAsync()` returns the REAL wte row (via weights.js) with seeded-random fallback
+- `js/weights.js` — Fetches real weights from HF Hub via HTTP Range requests over the original `model.safetensors` (header parsed once, rows fetched on demand, ~3KB/token). ONNX repo IDs map to original repos in REPO_MAP
+- `js/attention.js` — Real layer-0 attention computed in JS: one-time fetch of ln_1 + c_attn weights (~7MB for GPT-2, persisted in Cache API), then wte+wpe → LayerNorm → QK → causal softmax per head
+- `js/sampling-panel.js` — Animated live distribution bar chart in the sidebar (top-20 candidates, top-k cut line, nucleus shading, ★ sampled token)
+- `js/viz.js` — Canvas rendering engine (largest file). Columns layout, glow animation loop, zoom/pan, hover zone detection, output probability bars, token travel animation, attention arcs on token hover, layer click callback
 - `js/config.js` — Reactive state store with pub/sub (`get`/`set`/`onChange`)
 
 **CSS is modular:** `main.css` (layout + theme variables), `sidebar.css`, `viz.css`, `input.css`, `info-panel.css`. CSS variables defined in `:root` in `main.css`.

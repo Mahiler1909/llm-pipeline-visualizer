@@ -18,11 +18,13 @@ Each stage is rendered as an interactive network on Canvas with animations, zoom
 
 - **Full pipeline visualization** — Animated network with nodes for each token, layer, and prediction
 - **Real in-browser inference** — GPT-2 running via Transformers.js (ONNX), not a simulation
+- **Real embeddings** — Each embedding node shows the actual `wte` row of GPT-2, fetched on demand from the original safetensors via HTTP Range requests (~3KB per token)
+- **Real layer-0 attention** — Click a transformer layer to see the block internals (LayerNorm → MHA → FFN → residuals) and the real attention matrix per head, computed in JS from the original weights; hovering a token draws its attention arcs on the canvas
+- **Cosine similarity matrix** — Compare the embeddings of all prompt tokens against each other
+- **Live sampling distribution** — Sidebar chart that morphs in real time as you move temperature/top-k/top-p, with the top-k cut and the top-p nucleus marked; greedy decoding toggle
 - **4 available models** — DistilGPT-2 (82M), GPT-2 (124M), GPT-2 Medium (355M), GPT-2 Large (774M)
-- **Interactive sampling** — Adjust temperature, top-k, and top-p in real time and see how probabilities change
 - **Autoregressive generation** — "Auto-generate" button that runs multiple steps with token travel animation
-- **Educational panel** — Hover over each zone to see an explanation of what that stage does
-- **Embedding explorer** — Click on an embedding node to see its vector as a heatmap
+- **Educational panel** — Hover over each zone for a two-level explanation (Básico / Profundizar, with the actual formulas) plus a suggested hands-on experiment
 - **Collapsible sidebar** — Side panel with model info and configuration
 
 ## How to use
@@ -58,16 +60,19 @@ Open `http://localhost:8080` in your browser.
 ## Structure
 
 ```
-├── index.html          # Single page
+├── index.html            # Single page
 ├── js/
-│   ├── app.js          # Main orchestrator
-│   ├── pipeline.js     # Tokenize → infer → sample
-│   ├── models.js       # Model loading via Transformers.js
-│   ├── viz.js          # Canvas visualization engine
-│   ├── config.js       # Reactive state (pub/sub)
-│   └── utils.js        # Utilities (softmax, colors, etc)
-├── css/                # One CSS file per component
-└── assets/             # Favicon
+│   ├── app.js            # Main orchestrator
+│   ├── pipeline.js       # Tokenize → infer → sample (+ live distribution)
+│   ├── models.js         # Model loading via Transformers.js
+│   ├── weights.js        # Real weights via Range requests over safetensors
+│   ├── attention.js      # Real layer-0 attention computed in JS
+│   ├── sampling-panel.js # Animated softmax distribution panel
+│   ├── viz.js            # Canvas visualization engine
+│   ├── config.js         # Reactive state (pub/sub)
+│   └── utils.js          # Utilities (softmax, cosine similarity, colors)
+├── css/                  # One CSS file per component
+└── assets/               # Favicon
 ```
 
 ## Supported models

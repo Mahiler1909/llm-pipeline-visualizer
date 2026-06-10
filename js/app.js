@@ -797,7 +797,7 @@ const INFO_CARDS = {
   token: {
     icon: '\ud83d\udcdd',
     title: 'Tokens',
-    getContent(cfg) {
+    getBasic(cfg) {
       return `
         <p class="info-panel__text">
           El modelo no lee palabras, lee <strong>tokens</strong>: fragmentos de texto con un ID numerico.
@@ -807,11 +807,28 @@ const INFO_CARDS = {
         </p>
         <div class="info-panel__formula">"The capital of" → [464, 3139, 286]</div>`;
     },
+    getAdvanced(cfg) {
+      const vocab = cfg ? cfg.vocab_size.toLocaleString() : '50,257';
+      return `
+        <p class="info-panel__text">
+          GPT-2 usa <strong>BPE (Byte-Pair Encoding)</strong>: parte de los 256 bytes posibles y
+          <strong>fusiona iterativamente el par de simbolos mas frecuente</strong> del corpus de entrenamiento,
+          unas 50.000 veces. Resultado: vocabulario de ${vocab} tokens.
+        </p>
+        <p class="info-panel__text">
+          Por eso una palabra rara o inventada se parte en varios pedazos (sus pares nunca fueron frecuentes),
+          y el espacio inicial forma parte del token: " the" y "the" son tokens distintos.
+        </p>
+        <div class="info-panel__formula">vocab = 256 bytes
++ ~50.000 fusiones BPE
++ &lt;|endoftext|&gt;</div>`;
+    },
+    experiment: 'Escribe una palabra inventada como "tokenizometro" y mira en cuantos pedazos la parte el tokenizer (chips de colores abajo).',
   },
   embedding: {
     icon: '\ud83d\udcca',
     title: 'Embeddings',
-    getContent(cfg) {
+    getBasic(cfg) {
       const dim = cfg ? cfg.hidden_dim : 768;
       return `
         <p class="info-panel__text">
@@ -821,30 +838,71 @@ const INFO_CARDS = {
           Palabras similares tienen numeros parecidos. Asi el modelo sabe que "gato" y "perro" son mas cercanos que "gato" y "avion".
         </p>
         <div class="info-panel__detail">
-          <span>Click en un nodo verde para ver su vector</span>
+          <span>Click en un nodo verde para ver el vector REAL del modelo</span>
         </div>`;
     },
+    getAdvanced(cfg) {
+      const dim = cfg ? cfg.hidden_dim : 768;
+      const vocab = cfg ? cfg.vocab_size : 50257;
+      return `
+        <p class="info-panel__text">
+          Los embeddings forman un <strong>espacio vectorial de ${dim} dimensiones</strong> donde la
+          <em>direccion</em> codifica significado. La cercania se mide con <strong>similitud coseno</strong>:
+        </p>
+        <div class="info-panel__formula">cos(\u03b8) = A\u00b7B / (|A|\u00b7|B|)
++1 = mismo sentido
+ 0 = sin relacion
+\u22121 = opuestos</div>
+        <p class="info-panel__text">
+          La matriz de embeddings (wte) es ${vocab.toLocaleString()}\u00d7${dim} \u2248
+          <strong>${Math.round(vocab * dim / 1e6)}M parametros</strong>, y se reutiliza al final del pipeline
+          para convertir el vector de salida en logits (<em>weight tying</em>).
+        </p>`;
+    },
+    experiment: 'Genera "The king and the queen" y pulsa el boton \u229e Similitud: \u00bfque par de tokens tiene la similitud mas alta?',
   },
   transformer: {
     icon: '\u26a1',
     title: 'Transformer',
-    getContent(cfg) {
-      const heads = cfg ? cfg.heads : 12;
+    getBasic(cfg) {
       const layers = cfg ? cfg.layers : 12;
       return `
         <p class="info-panel__text">
-          Aqui ocurre la "comprension". Cada token <strong>mira a todos los demas</strong> para entender el contexto
+          Aqui ocurre la "comprension". Cada token <strong>mira a todos los anteriores</strong> para entender el contexto
           (<strong>atencion</strong>) y luego procesa esa informacion.
         </p>
         <p class="info-panel__text">
           En "capital of <em>Spain</em>", el modelo conecta "capital" con "Spain" para deducir que se habla de Madrid. Se repite en <strong>${layers} capas</strong>, cada vez entendiendo relaciones mas complejas.
+        </p>
+        <div class="info-panel__detail">
+          <span>Click en un nodo morado para ver el interior de la capa (L1 muestra atencion REAL)</span>
+        </div>`;
+    },
+    getAdvanced(cfg) {
+      const heads = cfg ? cfg.heads : 12;
+      const dim = cfg ? cfg.hidden_dim : 768;
+      const ffn = cfg ? cfg.ffn_dim : 3072;
+      return `
+        <div class="info-panel__formula">Attention(Q,K,V) =
+softmax(Q\u00b7K\u1d40/\u221ad<sub>k</sub>)\u00b7V</div>
+        <p class="info-panel__text">
+          Cada token genera tres vectores: <strong>Q</strong>uery (que busco), <strong>K</strong>ey (que ofrezco)
+          y <strong>V</strong>alue (que comunico). El producto Q\u00b7K mide cuanto "encaja" cada par de tokens,
+          como un buscador comparando tu consulta con cada documento.
+        </p>
+        <p class="info-panel__text">
+          Esto pasa en <strong>${heads} cabezas en paralelo</strong> (cada una de ${dim / heads} dims) que aprenden
+          relaciones distintas: sintaxis, posiciones, referencias... Despues, un <strong>FFN</strong>
+          (${dim}\u2192${ffn}\u2192${dim}) procesa cada posicion por separado. Las conexiones residuales (\u2295)
+          y LayerNorm estabilizan el entrenamiento.
         </p>`;
     },
+    experiment: 'Haz click en la columna L1 para ver la matriz de atencion real y cambia de cabeza: cada una mira a tokens distintos.',
   },
   logit: {
     icon: '\ud83c\udfaf',
     title: 'Logits',
-    getContent(cfg) {
+    getBasic(cfg) {
       const vocab = cfg ? cfg.vocab_size.toLocaleString() : '50,257';
       return `
         <p class="info-panel__text">
@@ -854,11 +912,26 @@ const INFO_CARDS = {
           Estos puntajes se convierten en <strong>probabilidades</strong> (0-100%) con softmax. La <strong>temperatura</strong> los ajusta: baja = pocas opciones claras, alta = muchas opciones parejas.
         </p>`;
     },
+    getAdvanced(cfg) {
+      return `
+        <div class="info-panel__formula">p<sub>i</sub> = e^(z<sub>i</sub>/T) / Σ<sub>j</sub> e^(z<sub>j</sub>/T)</div>
+        <p class="info-panel__text">
+          La temperatura <strong>T divide los logits antes del softmax</strong>: con T&lt;1 las diferencias se
+          amplifican (distribucion afilada, casi determinista); con T&gt;1 se atenuan (distribucion plana, mas azar).
+          T cercana a 0 equivale a greedy: siempre gana el logit mayor.
+        </p>
+        <p class="info-panel__text">
+          Los logits salen de multiplicar el vector final del ultimo token por la matriz de embeddings
+          transpuesta (<em>weight tying</em>): literalmente se mide que token del vocabulario "se parece mas"
+          al vector que produjo el transformer.
+        </p>`;
+    },
+    experiment: 'Mueve temperature a 0.1 y mira la DISTRIBUCION EN VIVO del sidebar: una sola barra domina. Subela a 2.0 y compara.',
   },
   sampling: {
     icon: '\ud83c\udfb2',
     title: 'Sampling',
-    getContent(cfg) {
+    getBasic(cfg) {
       return `
         <p class="info-panel__text">
           El modelo <strong>no siempre elige la palabra mas probable</strong>. Elige al azar entre las mejores opciones, ponderando por probabilidad. Por eso cada generacion es diferente.
@@ -869,21 +942,66 @@ const INFO_CARDS = {
           La &#9733; marca el token elegido.
         </p>`;
     },
+    getAdvanced(cfg) {
+      return `
+        <div class="info-panel__formula">logits / T
+  &rarr; top-k  &rarr; softmax
+  &rarr; top-p  &rarr; renormalizar
+  &rarr; sample</div>
+        <p class="info-panel__text">
+          <strong>Greedy</strong> (siempre el mas probable) es determinista pero cae en bucles repetitivos.
+          El muestreo ponderado introduce variedad controlada.
+        </p>
+        <p class="info-panel__text">
+          <strong>Top-p (nucleus)</strong> es adaptativo: si el modelo esta muy seguro, el 90% acumulado lo
+          cubren 2-3 tokens (pocas opciones); si esta indeciso, entran muchos mas. Por eso suele funcionar
+          mejor que un top-k fijo.
+        </p>`;
+    },
+    experiment: 'Activa Greedy en el sidebar y usa Auto-generar dos veces con el mismo prompt: el texto sera identico. Desactivalo y cada corrida cambiara.',
   },
 };
+
+let infoTab = 'basic';       // selected tab persists while moving between zones
+let currentInfoZone = null;
+let currentInfoCfg = null;
+let infoHideTimer = null;
+let infoPanelHover = false;
 
 function updateInfoPanel(zone, modelCfg) {
   const card = zone ? INFO_CARDS[zone] : null;
   if (card) {
+    clearTimeout(infoHideTimer);
+    currentInfoZone = zone;
+    currentInfoCfg = modelCfg;
     infoIcon.textContent = card.icon;
     infoTitle.textContent = card.title;
-    infoBody.innerHTML = card.getContent(modelCfg);
+    renderInfoBody(card, modelCfg);
     infoPanel.hidden = false;
     legend.hidden = false;
   } else {
-    infoPanel.hidden = true;
-    legend.hidden = true;
+    // Delay the hide so the mouse can travel INTO the panel (tabs are clickable)
+    clearTimeout(infoHideTimer);
+    infoHideTimer = setTimeout(() => {
+      if (!infoPanelHover) {
+        infoPanel.hidden = true;
+        legend.hidden = true;
+      }
+    }, 350);
   }
+}
+
+function renderInfoBody(card, cfg) {
+  const content = infoTab === 'advanced' ? card.getAdvanced(cfg) : card.getBasic(cfg);
+  infoBody.innerHTML =
+    `<div class="info-panel__tabs">
+      <button class="info-panel__tab${infoTab === 'basic' ? ' info-panel__tab--active' : ''}" data-tab="basic">B&aacute;sico</button>
+      <button class="info-panel__tab${infoTab === 'advanced' ? ' info-panel__tab--active' : ''}" data-tab="advanced">Profundizar</button>
+    </div>` +
+    content +
+    (card.experiment
+      ? `<div class="info-panel__experiment"><span>&#129514;</span><span>${card.experiment}</span></div>`
+      : '');
 }
 
 // ─── Autoregressive Generation ───
@@ -990,6 +1108,26 @@ function setupEvents() {
 
   // Info panel: listen for hover zone changes on the canvas
   viz.onHoverZone(updateInfoPanel);
+
+  // Keep the panel open while the mouse is over it (the tabs are clickable)
+  infoPanel.addEventListener('mouseenter', () => {
+    infoPanelHover = true;
+    clearTimeout(infoHideTimer);
+  });
+  infoPanel.addEventListener('mouseleave', () => {
+    infoPanelHover = false;
+    infoPanel.hidden = true;
+    legend.hidden = true;
+  });
+
+  // Tab switching (Basico / Profundizar) via delegation
+  infoBody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.info-panel__tab');
+    if (!btn) return;
+    infoTab = btn.dataset.tab;
+    const card = INFO_CARDS[currentInfoZone];
+    if (card) renderInfoBody(card, currentInfoCfg);
+  });
 
   sidebarClose.addEventListener('click', () => {
     document.body.classList.add('sidebar-hidden');
