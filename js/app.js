@@ -7,7 +7,7 @@ import * as models from './models.js';
 import * as pipeline from './pipeline.js';
 import * as config from './config.js';
 import * as viz from './viz.js';
-import { getTokenColor } from './utils.js';
+import { getTokenColor, cosineSimilarity } from './utils.js';
 
 // ─── DOM Elements ───
 
@@ -51,10 +51,18 @@ const tooltipEl = $('tooltip');
 const embeddingModal = $('embedding-modal');
 const modalTokenText = $('modal-token-text');
 const modalTokenId = $('modal-token-id');
+const modalRealBadge = $('modal-real-badge');
 const modalHeatmap = $('modal-heatmap');
 const modalClose = $('modal-close');
 const modalInfoText = $('modal-info-text');
 const heatmapTooltip = $('heatmap-tooltip');
+
+const simBtn = $('sim-btn');
+const similarityModal = $('similarity-modal');
+const simCanvas = $('sim-canvas');
+const simClose = $('sim-close');
+const simBadge = $('sim-badge');
+const simInfoText = $('sim-info-text');
 
 const zoomInBtn = $('zoom-in');
 const zoomOutBtn = $('zoom-out');
@@ -173,6 +181,7 @@ async function runPipeline() {
     viz.build(result.tokens, result.modelConfig, result.predictions);
     moreBtn.disabled = false;
     autoBtn.disabled = false;
+    simBtn.disabled = result.tokens.length < 2;
   } catch (err) {
     console.error('[app] pipeline error:', err);
   } finally {
@@ -202,24 +211,48 @@ let currentEmbDims = 0;
 let currentEmbGridCols = 0;
 let currentEmbTokenText = '';
 let heatmapListenersAdded = false;
+let embModalRequestId = 0;
 
-function showEmbeddingModal(tokenId, tokenText) {
+async function showEmbeddingModal(tokenId, tokenText) {
   const cfg = models.getConfig(models.getLoadedModelId());
   if (!cfg) return;
   const dims = cfg.hidden_dim;
+  const requestId = ++embModalRequestId;
 
   modalTokenText.textContent = tokenText;
   modalTokenId.textContent = `ID: ${tokenId}`;
-  modalInfoText.textContent = `Este vector de ${dims} numeros representa el "significado" del token en un espacio matematico. Tokens con significados similares tienen vectores parecidos.`;
+  modalRealBadge.hidden = true;
+  modalInfoText.textContent = 'Descargando el vector real del modelo desde HuggingFace...';
 
-  const vec = models.getEmbeddingVector(tokenId, dims);
-  currentEmbVec = vec;
+  // Loading state on the heatmap canvas
+  currentEmbVec = null;
+  const hctx = modalHeatmap.getContext('2d');
+  hctx.clearRect(0, 0, modalHeatmap.width, modalHeatmap.height);
+  hctx.fillStyle = '#1a1a2e';
+  hctx.fillRect(0, 0, modalHeatmap.width, modalHeatmap.height);
+  hctx.fillStyle = '#8b949e';
+  hctx.font = '14px monospace';
+  hctx.textAlign = 'center';
+  hctx.fillText('Cargando vector real...', modalHeatmap.width / 2, modalHeatmap.height / 2);
+  embeddingModal.hidden = false;
+
+  const { vector, isReal } = await models.getEmbeddingVectorAsync(tokenId);
+  // Discard if the user opened another token meanwhile
+  if (requestId !== embModalRequestId || embeddingModal.hidden) return;
+
+  modalRealBadge.hidden = false;
+  modalRealBadge.textContent = isReal ? 'REAL' : 'SIMULADO';
+  modalRealBadge.className = 'modal__badge ' + (isReal ? 'modal__badge--real' : 'modal__badge--sim');
+  modalInfoText.textContent = isReal
+    ? `Este es el vector REAL de ${dims} numeros (fila ${tokenId} de la matriz wte.weight de GPT-2) que representa el "significado" del token. Tokens con significados similares tienen vectores parecidos.`
+    : `Vector simulado de ${dims} dimensiones (no se pudo descargar el real desde HuggingFace). La idea es la misma: cada token se representa con ${dims} numeros.`;
+
+  currentEmbVec = vector;
   currentEmbDims = dims;
   currentEmbGridCols = Math.ceil(Math.sqrt(dims));
   currentEmbTokenText = tokenText;
 
-  drawEmbeddingHeatmap(vec, dims, -1);
-  embeddingModal.hidden = false;
+  drawEmbeddingHeatmap(vector, dims, -1);
 
   if (!heatmapListenersAdded) {
     modalHeatmap.addEventListener('mousemove', handleHeatmapHover);
@@ -329,6 +362,176 @@ function drawEmbeddingHeatmap(vec, dims, highlightIdx) {
     ctx.lineWidth = 2.5;
     ctx.strokeRect(hCol * cellW - 0.5, hRow * cellH - 0.5, cellW + 0.5, cellH + 0.5);
   }
+}
+
+// ─── Similarity Modal (cosine similarity between input embeddings) ───
+
+const SIM_MARGIN = 78; // space for token labels on top/left axes
+let simData = null;    // { labels: [], matrix: Float32Array(n*n), n }
+let simListenersAdded = false;
+let simRequestId = 0;
+
+async function showSimilarityModal() {
+  const tokens = pipeline.getLastTokens();
+  if (!tokens || tokens.length < 2) return;
+  const requestId = ++simRequestId;
+
+  // Deduplicate by token ID (repeated tokens have identical embeddings)
+  const unique = [];
+  const seen = new Set();
+  for (const t of tokens) {
+    if (!seen.has(t.id)) {
+      seen.add(t.id);
+      unique.push(t);
+    }
+  }
+
+  simData = null;
+  simBadge.hidden = true;
+  const ctx = simCanvas.getContext('2d');
+  ctx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Descargando ${unique.length} vectores reales...`, simCanvas.width / 2, simCanvas.height / 2);
+  similarityModal.hidden = false;
+
+  const results = await Promise.all(unique.map(t => models.getEmbeddingVectorAsync(t.id)));
+  if (requestId !== simRequestId || similarityModal.hidden) return;
+
+  const allReal = results.every(r => r.isReal);
+  simBadge.hidden = false;
+  simBadge.textContent = allReal ? 'REAL' : 'SIMULADO';
+  simBadge.className = 'modal__badge ' + (allReal ? 'modal__badge--real' : 'modal__badge--sim');
+  simInfoText.textContent = allReal
+    ? 'Cada celda compara dos tokens del prompt usando sus vectores REALES: rojo = significados cercanos (similitud alta), azul = opuestos, oscuro = sin relacion. La diagonal siempre es 1.'
+    : 'No se pudieron descargar los vectores reales: con vectores simulados la similitud NO refleja significados. Revisa tu conexion e intenta de nuevo.';
+
+  const n = unique.length;
+  const matrix = new Float32Array(n * n);
+  for (let i = 0; i < n; i++) {
+    for (let j = i; j < n; j++) {
+      const sim = i === j ? 1 : cosineSimilarity(results[i].vector, results[j].vector);
+      matrix[i * n + j] = sim;
+      matrix[j * n + i] = sim;
+    }
+  }
+
+  simData = { labels: unique.map(t => t.text.trim() || '⎵'), matrix, n };
+  drawSimilarityMatrix(-1, -1);
+
+  if (!simListenersAdded) {
+    simCanvas.addEventListener('mousemove', handleSimHover);
+    simCanvas.addEventListener('mouseleave', () => {
+      heatmapTooltip.hidden = true;
+      if (simData) drawSimilarityMatrix(-1, -1);
+    });
+    simListenersAdded = true;
+  }
+}
+
+function simColor(sim) {
+  // Diverging scale: blue (-1) → dark (0) → red (+1)
+  const t = Math.min(Math.abs(sim), 1);
+  if (sim >= 0) {
+    return `rgb(${Math.round(26 + t * 229)},${Math.round(26 + t * 60)},${Math.round(46 + t * 30)})`;
+  }
+  return `rgb(${Math.round(26 + t * 30)},${Math.round(26 + t * 70)},${Math.round(46 + t * 209)})`;
+}
+
+function drawSimilarityMatrix(hi, hj) {
+  if (!simData) return;
+  const { labels, matrix, n } = simData;
+  const ctx = simCanvas.getContext('2d');
+  const size = simCanvas.width;
+  const cell = (size - SIM_MARGIN) / n;
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, size, size);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      ctx.fillStyle = simColor(matrix[i * n + j]);
+      ctx.fillRect(SIM_MARGIN + j * cell, SIM_MARGIN + i * cell, cell - 1, cell - 1);
+    }
+  }
+
+  // Value inside cells when they are big enough
+  if (cell >= 34) {
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const v = matrix[i * n + j];
+        ctx.fillStyle = Math.abs(v) > 0.55 ? '#0d1117' : '#c9d1d9';
+        ctx.fillText(v.toFixed(2), SIM_MARGIN + j * cell + cell / 2, SIM_MARGIN + i * cell + cell / 2);
+      }
+    }
+  }
+
+  // Axis labels
+  ctx.font = '10px monospace';
+  const maxLabel = 9;
+  for (let i = 0; i < n; i++) {
+    const text = labels[i].length > maxLabel ? labels[i].slice(0, maxLabel) + '…' : labels[i];
+    const active = i === hi || i === hj;
+    ctx.fillStyle = active ? '#fbbf24' : '#8b949e';
+    // Left axis (rows)
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, SIM_MARGIN - 6, SIM_MARGIN + i * cell + cell / 2);
+    // Top axis (columns), rotated
+    ctx.save();
+    ctx.translate(SIM_MARGIN + i * cell + cell / 2, SIM_MARGIN - 6);
+    ctx.rotate(-Math.PI / 4);
+    ctx.textAlign = 'left';
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+  }
+
+  // Highlight hovered cell
+  if (hi >= 0 && hj >= 0) {
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(SIM_MARGIN + hj * cell - 0.5, SIM_MARGIN + hi * cell - 0.5, cell, cell);
+  }
+}
+
+function handleSimHover(e) {
+  if (!simData) return;
+  const rect = simCanvas.getBoundingClientRect();
+  const scale = simCanvas.width / rect.width;
+  const mx = (e.clientX - rect.left) * scale;
+  const my = (e.clientY - rect.top) * scale;
+  const cell = (simCanvas.width - SIM_MARGIN) / simData.n;
+  const j = Math.floor((mx - SIM_MARGIN) / cell);
+  const i = Math.floor((my - SIM_MARGIN) / cell);
+
+  if (i < 0 || j < 0 || i >= simData.n || j >= simData.n) {
+    heatmapTooltip.hidden = true;
+    drawSimilarityMatrix(-1, -1);
+    return;
+  }
+
+  const sim = simData.matrix[i * simData.n + j];
+  let desc;
+  if (i === j) desc = 'El mismo token: similitud perfecta';
+  else if (sim > 0.4) desc = 'Significados muy relacionados';
+  else if (sim > 0.25) desc = 'Algo relacionados';
+  else if (sim > -0.1) desc = 'Poca relacion semantica';
+  else desc = 'Direcciones opuestas en el espacio';
+
+  heatmapTooltip.innerHTML =
+    `<b>"${simData.labels[i]}"</b> vs <b>"${simData.labels[j]}"</b><br>` +
+    `<span style="color:${sim > 0.25 ? '#f87171' : '#60a5fa'}; font-size:1.1em; font-weight:700">${sim.toFixed(3)}</span><br>` +
+    `<span style="color:#8b949e">${desc}</span>`;
+  heatmapTooltip.style.left = (e.clientX + 16) + 'px';
+  heatmapTooltip.style.top = (e.clientY - 14) + 'px';
+  heatmapTooltip.hidden = false;
+
+  drawSimilarityMatrix(i, j);
 }
 
 // ─── Info Panel (contextual education) ───
@@ -520,6 +723,7 @@ function setupEvents() {
     tokenCount.textContent = '0 tokens';
     moreBtn.disabled = true;
     autoBtn.disabled = true;
+    simBtn.disabled = true;
     hasGenerated = false;
     viz.clear();
     if (welcomeState) welcomeState.hidden = false;
@@ -572,6 +776,14 @@ function setupEvents() {
   modalClose.addEventListener('click', () => { embeddingModal.hidden = true; heatmapTooltip.hidden = true; });
   embeddingModal.addEventListener('click', (e) => {
     if (e.target === embeddingModal) { embeddingModal.hidden = true; heatmapTooltip.hidden = true; }
+  });
+
+  simBtn.addEventListener('click', () => {
+    showSimilarityModal().catch(err => console.error('[app] similarity error:', err));
+  });
+  simClose.addEventListener('click', () => { similarityModal.hidden = true; heatmapTooltip.hidden = true; });
+  similarityModal.addEventListener('click', (e) => {
+    if (e.target === similarityModal) { similarityModal.hidden = true; heatmapTooltip.hidden = true; }
   });
 
   zoomInBtn.addEventListener('click', () => viz.zoomIn());

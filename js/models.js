@@ -3,6 +3,9 @@
  * Loads real GPT-2 family models for browser inference.
  */
 
+import { seededRandom } from './utils.js';
+import * as weights from './weights.js';
+
 let transformers = null;
 
 async function loadTransformers() {
@@ -174,12 +177,10 @@ export function decodeToken(id) {
 }
 
 /**
- * Generate simulated embedding for visualization.
- * Real embeddings are inside the ONNX model and not directly accessible,
- * so we generate deterministic vectors with the correct dimensions.
+ * Simulated embedding (deterministic from token ID). Used as fallback
+ * when the real weights can't be fetched from HuggingFace Hub.
  */
 export function getEmbeddingVector(tokenId, dims) {
-  const { seededRandom } = await_utils();
   const rng = seededRandom(tokenId * 7919 + 31);
   const vec = new Float32Array(dims);
   for (let i = 0; i < dims; i++) {
@@ -188,21 +189,19 @@ export function getEmbeddingVector(tokenId, dims) {
   return vec;
 }
 
-// Lazy import utils to avoid circular deps
-let _utils = null;
-function await_utils() {
-  if (!_utils) {
-    // Inline the seededRandom to avoid import issues
-    _utils = {
-      seededRandom(seed) {
-        let t = (seed >>> 0) + 0x6D2B79F5;
-        return function () {
-          t = Math.imul(t ^ (t >>> 15), t | 1);
-          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
-      }
-    };
+/**
+ * Get the embedding vector for a token, preferring the REAL row of
+ * wte.weight fetched from the original safetensors on HuggingFace Hub.
+ * Returns { vector: Float32Array, isReal: boolean }.
+ */
+export async function getEmbeddingVectorAsync(tokenId) {
+  const config = MODEL_CONFIGS[currentModelId];
+  const dims = config ? config.hidden_dim : 768;
+  try {
+    const vector = await weights.getEmbeddingRow(currentModelId, tokenId);
+    return { vector, isReal: true };
+  } catch (err) {
+    console.warn('[models] embedding real no disponible, usando simulado:', err.message);
+    return { vector: getEmbeddingVector(tokenId, dims), isReal: false };
   }
-  return _utils;
 }

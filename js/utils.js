@@ -42,6 +42,17 @@ export function fmt(num, decimals = 2) {
   return num.toFixed(decimals);
 }
 
+export function cosineSimilarity(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  return denom > 0 ? dot / denom : 0;
+}
+
 export function lerp(a, b, t) {
   return a + (b - a) * t;
 }

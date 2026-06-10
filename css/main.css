@@ -201,6 +201,24 @@ body::before {
   border-radius: 4px;
 }
 
+.modal--wide {
+  max-width: 580px;
+}
+
+.modal__badge--real {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.modal__badge--sim {
+  color: #8b949e;
+  background: rgba(139, 148, 158, 0.12);
+}
+
+.modal__heatmap--smooth {
+  image-rendering: auto;
+}
+
 .modal__close {
   margin-left: auto;
   background: none;

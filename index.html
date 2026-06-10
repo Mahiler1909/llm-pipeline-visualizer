@@ -132,6 +132,7 @@
       <button class="input-area__btn input-area__btn--generate" id="generate-btn">Generar</button>
       <button class="input-area__btn input-area__btn--more" id="more-btn" disabled>+ M&aacute;s</button>
       <button class="input-area__btn input-area__btn--auto" id="auto-btn" disabled>&#9654; Auto-generar</button>
+      <button class="input-area__btn" id="sim-btn" disabled title="Matriz de similitud coseno entre los embeddings del prompt">&#8862; Similitud</button>
       <button class="input-area__btn input-area__btn--reset" id="reset-btn">&#8635;</button>
       <span class="input-area__footer">
         Modelo: <strong id="footer-model">GPT-2</strong> | Powered by
@@ -151,6 +152,7 @@
       <div class="modal__header">
         <h3 class="modal__title">Vector de &quot;<span id="modal-token-text"></span>&quot;</h3>
         <span class="modal__badge" id="modal-token-id">ID: 0</span>
+        <span class="modal__badge" id="modal-real-badge" hidden></span>
         <button class="modal__close" id="modal-close">&times;</button>
       </div>
       <canvas class="modal__heatmap" id="modal-heatmap" width="384" height="384"></canvas>
@@ -161,6 +163,22 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=8"></script>
+  <!-- Similarity modal -->
+  <div class="modal-overlay" id="similarity-modal" hidden>
+    <div class="modal modal--wide">
+      <div class="modal__header">
+        <h3 class="modal__title">Similitud coseno entre embeddings</h3>
+        <span class="modal__badge" id="sim-badge" hidden></span>
+        <button class="modal__close" id="sim-close">&times;</button>
+      </div>
+      <canvas class="modal__heatmap modal__heatmap--smooth" id="sim-canvas" width="460" height="460"></canvas>
+      <div class="modal__info">
+        <span>&#128161;</span>
+        <p id="sim-info-text">Cada celda compara dos tokens del prompt: rojo = significados cercanos (similitud alta), azul = opuestos, oscuro = sin relaci&oacute;n. La diagonal siempre es 1 (cada token comparado consigo mismo).</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js?v=9"></script>
 </body>
 </html>
