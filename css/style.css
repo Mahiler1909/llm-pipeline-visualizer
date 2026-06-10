@@ -799,6 +799,46 @@ input[type="range"]::-moz-range-thumb {
   border-top: 1px solid var(--hairline);
 }
 
+/* ─── Modo presentación (?presentar o tecla P) ─── */
+
+/* visibility (no display): conserva el layout para que el scroll sea estable */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  visibility: hidden;
+  transition: opacity 0.5s ease, transform 0.5s ease, visibility 0s linear 0.5s;
+}
+
+.reveal--shown {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+/* que los pasos no queden bajo la barra sticky al hacer scrollIntoView */
+.stage__prose > *,
+.stage__widget {
+  scroll-margin-top: 70px;
+  scroll-margin-bottom: 24px;
+}
+
+.presenter-hud {
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  z-index: 60;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 6px 12px;
+  box-shadow: 0 2px 10px rgba(31, 30, 28, 0.08);
+}
+
+.presenter-hud[hidden] { display: none; }
+
 /* ─── Responsive ─── */
 
 @media (max-width: 900px) {

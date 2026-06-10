@@ -19,7 +19,7 @@ export function init(rootEl, callbacks) {
       <div class="bucle-actions">
         <button class="btn btn--primary" id="btn-accept"></button>
       </div>
-      <p class="widget-caption" id="bucle-closing" style="margin-top:2rem">${esc(getClosing())}</p>
+      <p class="widget-caption" id="bucle-closing" style="margin-top:2rem" data-reveal>${esc(getClosing())}</p>
     </div>`;
 
   waitEl = root.querySelector('#bucle-wait');

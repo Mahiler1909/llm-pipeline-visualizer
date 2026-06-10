@@ -23,6 +23,7 @@ The last section closes the loop: the sampled token is appended to your text and
 - **The loop** — One button appends the chosen token and repeats the cycle, with a sticky context bar tracking the growing text and cycle count.
 - **Educational prose in Spanish** — Each section pairs its widget with a plain-language explanation, a collapsible «Profundizar» block with the actual formulas, and a hands-on «Pruébalo» experiment.
 - **Shareable journeys** — The prompt is encoded in the URL (`?p=…`), so any walkthrough can be sent as a link.
+- **Presentation mode** — Add `?presentar` to the URL (or press `P`) and the content reveals step by step with a fade, advancing with Space / arrow keys / a presenter clicker (PageDown). Widgets stay fully interactive for live demos; press `P` or `Esc` to exit.
 
 ## How to use
 

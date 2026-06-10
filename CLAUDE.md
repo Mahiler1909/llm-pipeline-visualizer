@@ -25,6 +25,8 @@ Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transform
 
 **UI (one module per section):** each `js/stages/*.js` exports `init(rootEl, …)` and `update(state)`. Sliders/controls are built ONCE in `init` (re-rendering them mid-drag breaks the drag); `update` only refreshes data nodes. `js/stages/shared.js` has helpers (esc, tokenLabel with ␣, pastel palette, divergent color scale). `js/content.js` holds all educational prose as template functions receiving the model config.
 
+**Presentation mode (`js/presenter.js`):** activated via `?presentar` or the `P` key; reveals title → widget → paragraphs → Profundizar → Pruébalo per section (Space/arrows/PageDown advance, click only on dead zones). It ONLY toggles CSS classes (`.reveal`/`.reveal--shown`, visibility-based so layout is preserved) on stable structural elements — prose children and widget containers — which survive `update()` re-renders. Elements inside widgets marked `[data-reveal]` become their own final steps (e.g. the closing line in bucle).
+
 ## Key Patterns
 
 - **True probabilities, HF-style filtering:** every `prob` shown in the UI is softmax(z/T) over the FULL vocabulary (honest numbers), but the top-p nucleus cut still accumulates over top-k-renormalized probs — matching HF's sequential logits processors. Don't "simplify" either side: changing the first lies to the user, changing the second changes sampling behavior.

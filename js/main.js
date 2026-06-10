@@ -6,6 +6,7 @@
 import * as models from './models.js';
 import * as pipeline from './pipeline.js';
 import * as config from './config.js';
+import * as presenter from './presenter.js';
 import { renderProse } from './content.js';
 import { esc } from './stages/shared.js';
 import * as tokensStage from './stages/tokens.js';
@@ -58,6 +59,7 @@ atencionStage.init(document.getElementById('w-atencion'), document.getElementByI
 logitsStage.init(document.getElementById('w-logits'));
 muestreoStage.init(document.getElementById('w-muestreo'), { onResample: refreshDerived });
 bucleStage.init(document.getElementById('w-bucle'), { onAccept: acceptAndRepeat });
+presenter.init();
 
 // ─── Carga del modelo (tokenizer primero, ONNX en background) ───
 
@@ -202,7 +204,8 @@ function startJourney({ scroll = true } = {}) {
   const url = new URL(location.href);
   url.searchParams.set('p', text);
   history.replaceState(null, '', url);
-  runCycle(text, { scrollToTokens: scroll });
+  // En modo presentación el scroll lo dicta el avance de pasos, no el inicio
+  runCycle(text, { scrollToTokens: scroll && !presenter.isActive() });
 }
 
 // Llegada por permalink: precargar el prompt y arrancar sin scroll
