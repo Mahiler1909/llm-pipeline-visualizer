@@ -6,6 +6,7 @@ const state = {
   temperature: 1.0,
   topK: 10,
   topP: 0.9,
+  greedy: false,
   modelId: 'onnx-community/gpt2-ONNX',
 };
 

@@ -181,6 +181,32 @@ body.sidebar-hidden .sidebar-tab {
   cursor: pointer;
 }
 
+/* Live distribution panel */
+.config__dist {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  cursor: crosshair;
+}
+
+.config__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  font-size: 0.7rem;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.config__toggle input {
+  accent-color: #fbbf24;
+  cursor: pointer;
+}
+
 /* Info icon */
 .config__info {
   display: inline-flex;

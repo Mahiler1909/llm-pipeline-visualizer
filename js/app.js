@@ -8,6 +8,7 @@ import * as pipeline from './pipeline.js';
 import * as config from './config.js';
 import * as viz from './viz.js';
 import * as attention from './attention.js';
+import * as samplingPanel from './sampling-panel.js';
 import { getTokenColor, cosineSimilarity } from './utils.js';
 
 // ─── DOM Elements ───
@@ -79,6 +80,9 @@ const headSelect = $('head-select');
 const attnHeatmap = $('attn-heatmap');
 const layerInfoText = $('layer-info-text');
 
+const distCanvas = $('dist-canvas');
+const greedyToggle = $('greedy-toggle');
+
 const zoomInBtn = $('zoom-in');
 const zoomOutBtn = $('zoom-out');
 const zoomResetBtn = $('zoom-reset');
@@ -104,6 +108,7 @@ async function init() {
 
   try {
     viz.init(networkCanvas, tooltipEl, showEmbeddingModal);
+    samplingPanel.init(distCanvas, tooltipEl);
     console.log('[app] viz initialized');
   } catch (err) {
     console.error('[app] viz init error:', err);
@@ -194,6 +199,7 @@ async function runPipeline() {
     tokenCount.textContent = `${result.tokens.length} tokens`;
 
     viz.build(result.tokens, result.modelConfig, result.predictions);
+    samplingPanel.update(pipeline.getDistribution());
     moreBtn.disabled = false;
     autoBtn.disabled = false;
     simBtn.disabled = result.tokens.length < 2;
@@ -975,6 +981,7 @@ function setupEvents() {
     moreBtn.disabled = true;
     autoBtn.disabled = true;
     simBtn.disabled = true;
+    samplingPanel.clear();
     hasGenerated = false;
     viz.clear();
     if (welcomeState) welcomeState.hidden = false;
@@ -1016,12 +1023,17 @@ function setupEvents() {
   });
 
   config.onChange((key) => {
-    if ((key === 'temperature' || key === 'topK' || key === 'topP') && pipeline.hasResults()) {
+    if ((key === 'temperature' || key === 'topK' || key === 'topP' || key === 'greedy') && pipeline.hasResults()) {
       const predictions = pipeline.recomputePredictions();
       if (predictions) {
         viz.updatePredictions(predictions);
+        samplingPanel.update(pipeline.getDistribution());
       }
     }
+  });
+
+  greedyToggle.addEventListener('change', () => {
+    config.set('greedy', greedyToggle.checked);
   });
 
   modalClose.addEventListener('click', () => { embeddingModal.hidden = true; heatmapTooltip.hidden = true; });

@@ -8,6 +8,7 @@ import * as config from './config.js';
 let lastLogits = null;
 let lastTokens = null;
 let lastModelConfig = null;
+let lastPredictions = null;
 let currentText = '';
 
 /**
@@ -28,8 +29,10 @@ export async function run(text) {
     logits,
     config.get('temperature'),
     config.get('topK'),
-    config.get('topP')
+    config.get('topP'),
+    config.get('greedy')
   );
+  lastPredictions = predictions;
 
   return { tokens, predictions, modelConfig: lastModelConfig };
 }
@@ -39,28 +42,24 @@ export async function run(text) {
  */
 export function recomputePredictions() {
   if (!lastLogits) return null;
-  return computePredictions(
+  lastPredictions = computePredictions(
     lastLogits,
     config.get('temperature'),
     config.get('topK'),
-    config.get('topP')
+    config.get('topP'),
+    config.get('greedy')
   );
+  return lastPredictions;
 }
 
 /**
- * Generate one more token: append the top prediction and re-run.
+ * Generate one more token: append the currently sampled prediction
+ * (the one marked with ★ in the viz) and return the new text.
  */
 export async function generateMore() {
-  if (!lastLogits || !lastTokens) return null;
+  if (!lastPredictions || !lastTokens) return null;
 
-  const predictions = computePredictions(
-    lastLogits,
-    config.get('temperature'),
-    config.get('topK'),
-    config.get('topP')
-  );
-  // Use the sampled token (not just the highest prob)
-  const sampled = predictions.find(p => p.isSampled) || predictions[0];
+  const sampled = lastPredictions.find(p => p.isSampled) || lastPredictions[0];
   const newText = currentText + sampled.word;
   return { newText, topWord: sampled.word };
 }
@@ -68,7 +67,7 @@ export async function generateMore() {
 /**
  * Compute top-k predictions from logits with temperature, top-p nucleus filtering, and sampling.
  */
-function computePredictions(logits, temperature, topK, topP) {
+function computePredictions(logits, temperature, topK, topP, greedy = false) {
   // 1. Apply temperature
   const scaled = new Float32Array(logits.length);
   const t = Math.max(temperature, 0.01);
@@ -115,22 +114,75 @@ function computePredictions(logits, temperature, topK, topP) {
   const nucleusSum = nucleus.reduce((s, p) => s + p.prob, 0);
   nucleus.forEach(p => { p.nucleusProb = p.prob / nucleusSum; });
 
-  // 6. Sample one token from nucleus
-  const r = Math.random();
-  let cum = 0;
-  for (const p of nucleus) {
-    cum += p.nucleusProb;
-    if (r <= cum) {
-      p.isSampled = true;
-      break;
-    }
-  }
-  // Fallback: if none sampled (floating point), pick first
-  if (!nucleus.some(p => p.isSampled)) {
+  // 6. Sample one token from nucleus (greedy: always the most probable)
+  if (greedy) {
     nucleus[0].isSampled = true;
+  } else {
+    const r = Math.random();
+    let cum = 0;
+    for (const p of nucleus) {
+      cum += p.nucleusProb;
+      if (r <= cum) {
+        p.isSampled = true;
+        break;
+      }
+    }
+    // Fallback: if none sampled (floating point), pick first
+    if (!nucleus.some(p => p.isSampled)) {
+      nucleus[0].isSampled = true;
+    }
   }
 
   return predictions;
+}
+
+/**
+ * Distribution snapshot for the live sampling panel: top-n candidates by
+ * RAW logit (stable order while sliders move) with softmax(T) over them.
+ * Nucleus/sampled flags mirror the current predictions so the panel and
+ * the canvas always agree.
+ */
+export function getDistribution(n = 20) {
+  if (!lastLogits) return null;
+  const temperature = config.get('temperature');
+  const topK = config.get('topK');
+  const topP = config.get('topP');
+
+  // Top-n indices by raw logit
+  const indexed = [];
+  for (let i = 0; i < lastLogits.length; i++) {
+    indexed.push({ rawLogit: lastLogits[i], idx: i });
+  }
+  indexed.sort((a, b) => b.rawLogit - a.rawLogit);
+  const top = indexed.slice(0, n);
+
+  // Softmax with temperature over the top-n
+  const t = Math.max(temperature, 0.01);
+  const maxVal = top[0].rawLogit / t;
+  let sum = 0;
+  const exps = top.map(item => {
+    const e = Math.exp(item.rawLogit / t - maxVal);
+    sum += e;
+    return e;
+  });
+
+  const flags = new Map((lastPredictions || []).map(p => [p.tokenId, p]));
+
+  const items = top.map((item, rank) => {
+    const pred = flags.get(item.idx);
+    return {
+      word: models.decodeToken(item.idx),
+      tokenId: item.idx,
+      prob: exps[rank] / sum,
+      rawLogit: item.rawLogit,
+      rank,
+      cutByTopK: rank >= topK,
+      inNucleus: pred ? pred.inNucleus : false,
+      isSampled: pred ? pred.isSampled : false,
+    };
+  });
+
+  return { items, temperature, topK, topP, greedy: config.get('greedy') };
 }
 
 export function getLastTokens() {
