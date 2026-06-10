@@ -25,7 +25,9 @@ export const MODEL_CONFIGS = {
     vocab_size: 50257,
     params: '82M',
     heads: 12,
-    dtype: 'fp32',
+    // fp16 = mitad de descarga que fp32 (156MB vs 313MB) sin ruido de
+    // cuantización; q8 solo baja a 226MB porque los embeddings quedan fp32.
+    dtype: 'fp16',
   },
   'onnx-community/gpt2-ONNX': {
     name: 'GPT-2',
@@ -35,7 +37,7 @@ export const MODEL_CONFIGS = {
     vocab_size: 50257,
     params: '124M',
     heads: 12,
-    dtype: 'fp32',
+    dtype: 'fp16',
   },
   'onnx-community/gpt2-medium-ONNX': {
     name: 'GPT-2 Medium',

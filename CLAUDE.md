@@ -17,7 +17,7 @@ Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transform
 **Data flow:** `js/main.js` owns the central `state` (text, tokens, predictions, history, cycle) and orchestrates `runCycle(text)`: tokenize (works as soon as the tokenizer downloads, before the ONNX model finishes) → update front stages (tokens/embeddings/atención) → await model → `pipeline.run` → update back stages (logits/muestreo/bucle).
 
 **ML core (UI-agnostic, reusable):**
-- `js/models.js` — Transformers.js wrapper. MODEL_CONFIGS for 4 GPT-2 variants; the UI uses DistilGPT-2 fixed, with `?model=gpt2|gpt2-medium|gpt2-large` URL escape hatch. Note: `loadModel`'s `onProgress` reports phase `'model'` once the tokenizer is ready — `main.js` uses that to resolve `tokenizerReady` early.
+- `js/models.js` — Transformers.js wrapper. MODEL_CONFIGS for 4 GPT-2 variants; the UI uses DistilGPT-2 fixed (fp16, ~165MB — fp32 is 313MB and q8 only saves to 226MB because embeddings stay fp32), with `?model=gpt2|gpt2-medium|gpt2-large` URL escape hatch. Note: `loadModel`'s `onProgress` reports phase `'model'` once the tokenizer is ready — `main.js` uses that to resolve `tokenizerReady` early.
 - `js/pipeline.js` — tokenize → forward → sampling. Caches logits so `recomputePredictions()` re-derives (and re-samples) without re-inference — this powers the sliders AND the «Muestrear» button. `getDistribution(n)` returns top-n by raw logit (stable order while sliding).
 - `js/weights.js` — real weight rows from HF Hub via HTTP Range requests over the original `model.safetensors` (REPO_MAP maps ONNX ids to original repos).
 - `js/attention.js` — real layer-0 attention computed in JS (~7MB one-time fetch, persisted in Cache API).
@@ -27,6 +27,7 @@ Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transform
 
 ## Key Patterns
 
+- **True probabilities, HF-style filtering:** every `prob` shown in the UI is softmax(z/T) over the FULL vocabulary (honest numbers), but the top-p nucleus cut still accumulates over top-k-renormalized probs — matching HF's sequential logits processors. Don't "simplify" either side: changing the first lies to the user, changing the second changes sampling behavior.
 - **No floating tooltips:** each widget has a fixed `.widget-caption` line that hover writes into.
 - **Lazy attention:** an IntersectionObserver on `#st-atencion` triggers the 7MB download only when the section approaches the viewport, with an inline progress bar.
 - **Scroll with fallback:** `scrollToSection()` in main.js tries smooth scrollIntoView, then after 700ms jumps instantly if not near the target (smooth scrolling can be disabled/cancelled by the environment or scroll anchoring during re-renders). Always use it instead of raw scrollIntoView.

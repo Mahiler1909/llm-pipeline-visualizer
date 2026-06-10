@@ -66,34 +66,35 @@ export async function generateMore() {
 
 /**
  * Compute top-k predictions from logits with temperature, top-p nucleus filtering, and sampling.
+ *
+ * `prob` es la probabilidad VERDADERA: softmax(z/T) sobre el vocabulario
+ * completo, no renormalizada al top-k. El corte top-p, en cambio, acumula
+ * sobre las probs renormalizadas al top-k — igual que los procesadores
+ * secuenciales de HF (top-k enmascara, luego top-p renormaliza).
  */
 function computePredictions(logits, temperature, topK, topP, greedy = false) {
-  // 1. Apply temperature
-  const scaled = new Float32Array(logits.length);
   const t = Math.max(temperature, 0.01);
-  for (let i = 0; i < logits.length; i++) {
-    scaled[i] = logits[i] / t;
-  }
 
-  // 2. Find top-k indices
+  // 1. Find top-k indices (el orden por logit crudo == orden por logit/T)
   const indexed = [];
-  for (let i = 0; i < scaled.length; i++) {
-    indexed.push({ val: scaled[i], rawLogit: logits[i], idx: i });
+  for (let i = 0; i < logits.length; i++) {
+    indexed.push({ rawLogit: logits[i], idx: i });
   }
-  indexed.sort((a, b) => b.val - a.val);
+  indexed.sort((a, b) => b.rawLogit - a.rawLogit);
   const topItems = indexed.slice(0, topK);
 
-  // 3. Softmax over top-k
-  const maxVal = topItems[0].val;
-  const exps = topItems.map(item => ({
-    ...item,
-    exp: Math.exp(item.val - maxVal),
-  }));
-  const sumExp = exps.reduce((sum, item) => sum + item.exp, 0);
+  // 2. Softmax con temperatura sobre el vocabulario COMPLETO
+  const maxVal = topItems[0].rawLogit / t;
+  let sumExpFull = 0;
+  for (let i = 0; i < logits.length; i++) {
+    sumExpFull += Math.exp(logits[i] / t - maxVal);
+  }
+  const expsTop = topItems.map(item => Math.exp(item.rawLogit / t - maxVal));
+  const sumExpTopK = expsTop.reduce((sum, e) => sum + e, 0);
 
-  const predictions = exps.map(item => ({
+  const predictions = topItems.map((item, i) => ({
     word: models.decodeToken(item.idx),
-    prob: item.exp / sumExp,
+    prob: expsTop[i] / sumExpFull,
     logit: item.rawLogit,
     tokenId: item.idx,
     inNucleus: false,
@@ -101,20 +102,20 @@ function computePredictions(logits, temperature, topK, topP, greedy = false) {
     nucleusProb: 0,
   }));
 
-  // 4. Top-p nucleus filtering
+  // 3. Top-p nucleus filtering (acumulado sobre probs renormalizadas al top-k)
   let cumProb = 0;
-  for (const pred of predictions) {
-    cumProb += pred.prob;
-    pred.inNucleus = true;
+  for (let i = 0; i < predictions.length; i++) {
+    cumProb += expsTop[i] / sumExpTopK;
+    predictions[i].inNucleus = true;
     if (cumProb >= topP) break;
   }
 
-  // 5. Re-normalize nucleus probabilities
+  // 4. Re-normalize nucleus probabilities
   const nucleus = predictions.filter(p => p.inNucleus);
   const nucleusSum = nucleus.reduce((s, p) => s + p.prob, 0);
   nucleus.forEach(p => { p.nucleusProb = p.prob / nucleusSum; });
 
-  // 6. Sample one token from nucleus (greedy: always the most probable)
+  // 5. Sample one token from nucleus (greedy: always the most probable)
   if (greedy) {
     nucleus[0].isSampled = true;
   } else {
@@ -138,9 +139,9 @@ function computePredictions(logits, temperature, topK, topP, greedy = false) {
 
 /**
  * Distribution snapshot for the live sampling panel: top-n candidates by
- * RAW logit (stable order while sliders move) with softmax(T) over them.
- * Nucleus/sampled flags mirror the current predictions so the panel and
- * the canvas always agree.
+ * RAW logit (stable order while sliders move). `prob` is the TRUE
+ * probability — softmax(z/T) over the full vocabulary. Nucleus/sampled
+ * flags mirror the current predictions so panel and widgets always agree.
  */
 export function getDistribution(n = 20) {
   if (!lastLogits) return null;
@@ -156,15 +157,14 @@ export function getDistribution(n = 20) {
   indexed.sort((a, b) => b.rawLogit - a.rawLogit);
   const top = indexed.slice(0, n);
 
-  // Softmax with temperature over the top-n
+  // Softmax with temperature over the FULL vocabulary
   const t = Math.max(temperature, 0.01);
   const maxVal = top[0].rawLogit / t;
   let sum = 0;
-  const exps = top.map(item => {
-    const e = Math.exp(item.rawLogit / t - maxVal);
-    sum += e;
-    return e;
-  });
+  for (let i = 0; i < lastLogits.length; i++) {
+    sum += Math.exp(lastLogits[i] / t - maxVal);
+  }
+  const exps = top.map(item => Math.exp(item.rawLogit / t - maxVal));
 
   const flags = new Map((lastPredictions || []).map(p => [p.tokenId, p]));
 

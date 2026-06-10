@@ -18,10 +18,11 @@ The last section closes the loop: the sampled token is appended to your text and
 - **Tokens** — Your prompt split into real BPE pieces with their IDs, plus a live mini-tokenizer to try any word.
 - **Real embeddings** — The actual `wte` rows fetched on demand from the original safetensors via HTTP Range requests (~3KB per token), shown as a 48-dimension bar strip plus a cosine-similarity matrix between your tokens.
 - **Real layer-0 attention** — The ~7MB of layer-0 weights download lazily when you reach the section (persisted in the Cache API); one query row at a time, per-head or averaged, with percentages on the most-attended tokens.
-- **Logits + softmax** — Top-15 candidates with raw logits and probabilities; the temperature slider reshapes the bars instantly with no re-inference.
+- **Logits + softmax** — Top-15 candidates with raw logits and their *true* probabilities (softmax over the full 50k vocabulary, not renormalized); the temperature slider reshapes the bars instantly with no re-inference.
 - **Sampling roulette** — Surviving nucleus candidates as a stacked probability bar; top-k / top-p sliders visibly eliminate candidates; «Muestrear» re-rolls the dice on the same distribution; greedy toggle.
 - **The loop** — One button appends the chosen token and repeats the cycle, with a sticky context bar tracking the growing text and cycle count.
 - **Educational prose in Spanish** — Each section pairs its widget with a plain-language explanation, a collapsible «Profundizar» block with the actual formulas, and a hands-on «Pruébalo» experiment.
+- **Shareable journeys** — The prompt is encoded in the URL (`?p=…`), so any walkthrough can be sent as a link.
 
 ## How to use
 
@@ -40,7 +41,7 @@ npx serve .
 
 Open `http://localhost:8080` in your browser.
 
-> The first load downloads DistilGPT-2 (~350MB) in the background. It's cached by the browser for subsequent visits. Other GPT-2 variants are available via `?model=gpt2`, `?model=gpt2-medium`, or `?model=gpt2-large`.
+> The first load downloads DistilGPT-2 (~165MB, fp16) in the background. It's cached by the browser for subsequent visits. Other GPT-2 variants are available via `?model=gpt2`, `?model=gpt2-medium`, or `?model=gpt2-large`.
 
 ## Stack
 
@@ -75,7 +76,7 @@ Open `http://localhost:8080` in your browser.
 
 - Recent Chrome, Firefox, or Safari
 - WebAssembly enabled
-- ~400MB of storage for model cache
+- ~200MB of storage for model cache
 
 ## License
 

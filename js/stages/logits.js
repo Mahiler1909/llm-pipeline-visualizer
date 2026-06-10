@@ -68,5 +68,5 @@ export function update(state) {
 
   captionEl.textContent =
     `los ${TOP_N} logits más altos de ${state.modelConfig.vocab_size.toLocaleString('es')} · ` +
-    `columna gris = logit crudo (z) · barra = softmax(z/T)`;
+    `columna gris = logit crudo (z) · % = probabilidad real softmax(z/T) sobre todo el vocabulario`;
 }

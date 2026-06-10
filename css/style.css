@@ -314,7 +314,7 @@ details.deeper p { margin: 0.8rem 0; }
 }
 
 .btn--primary:hover { background: #a8451f; }
-.btn--primary:disabled { opacity: 0.5; cursor: default; }
+.btn:disabled { opacity: 0.5; cursor: default; }
 
 .chip {
   font-family: var(--mono);
@@ -802,7 +802,22 @@ input[type="range"]::-moz-range-thumb {
 /* ─── Responsive ─── */
 
 @media (max-width: 900px) {
-  .rail { display: none; }
+  /* El rail pasa a tira horizontal flotante abajo (solo puntos) */
+  .rail {
+    top: auto;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: row;
+    gap: 14px;
+    padding: 9px 14px;
+    background: var(--bg);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    box-shadow: 0 2px 10px rgba(31, 30, 28, 0.08);
+  }
+
+  .rail__label { display: none; }
 
   .stage { padding: 4rem 20px; min-height: auto; }
 

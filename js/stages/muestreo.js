@@ -8,7 +8,7 @@ import * as config from '../config.js';
 import { esc, tokenLabel, pastelBg, fmtPct } from './shared.js';
 
 let root, waitEl, contentEl, ruletaEl, captionEl, cutListEl;
-let topkVal, toppVal;
+let topkVal, toppVal, btnSampleEl;
 let onResample = null;
 let flashNext = false;
 
@@ -58,7 +58,8 @@ export function init(rootEl, callbacks) {
     config.set('greedy', e.target.checked);
   });
 
-  root.querySelector('#btn-sample').addEventListener('click', () => {
+  btnSampleEl = root.querySelector('#btn-sample');
+  btnSampleEl.addEventListener('click', () => {
     flashNext = true;
     onResample?.();
   });
@@ -80,9 +81,14 @@ export function update(state) {
     </div>`).join('');
   flashNext = false;
 
+  // Con greedy no hay azar: muestrear de nuevo daría siempre lo mismo
+  const greedy = config.get('greedy');
+  btnSampleEl.disabled = greedy;
+
   const sampled = state.predictions.find(p => p.isSampled);
   captionEl.textContent = sampled
     ? `★ ganó "${tokenLabel(sampled.word)}" con ${fmtPct(sampled.nucleusProb)} del núcleo · ${nucleus.length} candidato${nucleus.length === 1 ? '' : 's'} en juego`
+      + (greedy ? ' · greedy activado: sin azar, siempre gana el más probable' : '')
     : '';
 
   // Candidatos eliminados (de los 15 más probables)

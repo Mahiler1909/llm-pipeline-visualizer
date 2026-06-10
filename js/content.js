@@ -51,7 +51,11 @@ export const PROSE = {
       ${cfg.vocab_size.toLocaleString('es')} × ${cfg.hidden_dim} ≈
       <strong>${Math.round(cfg.vocab_size * cfg.hidden_dim / 1e6)}M parámetros</strong>,
       y se reutiliza al final del pipeline para convertir el vector de salida en
-      puntajes (<em>weight tying</em>).</p>`,
+      puntajes (<em>weight tying</em>).</p>
+      <p>Falta un ingrediente: antes de entrar al transformer, a cada embedding se
+      le <strong>suma un embedding de posición</strong> (wpe). El mismo token en la
+      posición 3 y en la 7 entra como vectores distintos — sin esa señal, la
+      atención no sabría en qué orden están las palabras.</p>`,
     tryIt: (cfg) => `Vuelve arriba y comienza con «The king and the queen» — en la
       matriz de similitud, ¿qué par de tokens sale más alto?`,
   },
@@ -92,7 +96,11 @@ export const PROSE = {
       siguiente.</p>
       <p>Los puntajes se convierten en <strong>probabilidades</strong> con softmax,
       y la <strong>temperatura</strong> los moldea antes: baja = una opción domina,
-      alta = muchas opciones parejas. Muévela y mira las barras reaccionar al instante.</p>`,
+      alta = muchas opciones parejas. Muévela y mira las barras reaccionar al instante.</p>
+      <p>Los porcentajes son las probabilidades <strong>reales</strong> sobre los
+      ${cfg.vocab_size.toLocaleString('es')} tokens: fíjate en que con T=1 ni
+      siquiera el favorito suele pasar del 50% — el modelo siempre reparte su
+      apuesta entre miles de opciones.</p>`,
     advanced: (cfg) => `
       <div class="formula">pᵢ = e^(zᵢ/T) / Σⱼ e^(zⱼ/T)</div>
       <p>La temperatura <strong>divide los logits antes del softmax</strong>: con

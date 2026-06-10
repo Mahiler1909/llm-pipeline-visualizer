@@ -177,9 +177,10 @@ function updateContextBar() {
 
 // ─── Hero ───
 
-document.getElementById('btn-start').addEventListener('click', startJourney);
+document.getElementById('btn-start').addEventListener('click', () => startJourney());
 promptInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') startJourney();
+  // isComposing: no disparar a mitad de composición (IME, teclas muertas)
+  if (e.key === 'Enter' && !e.isComposing) startJourney();
 });
 
 document.querySelectorAll('#hero-examples .chip').forEach(chip => {
@@ -189,7 +190,7 @@ document.querySelectorAll('#hero-examples .chip').forEach(chip => {
   });
 });
 
-function startJourney() {
+function startJourney({ scroll = true } = {}) {
   const text = promptInput.value.trim();
   if (!text) return;
   state.baseText = text;
@@ -197,7 +198,18 @@ function startJourney() {
   state.cycle = 1;
   state.predictions = null;
   contextBar.hidden = false;
-  runCycle(text, { scrollToTokens: true });
+  // Permalink: el prompt vive en la URL para poder compartir el recorrido
+  const url = new URL(location.href);
+  url.searchParams.set('p', text);
+  history.replaceState(null, '', url);
+  runCycle(text, { scrollToTokens: scroll });
+}
+
+// Llegada por permalink: precargar el prompt y arrancar sin scroll
+const sharedPrompt = new URLSearchParams(location.search).get('p');
+if (sharedPrompt && sharedPrompt.trim()) {
+  promptInput.value = sharedPrompt.trim();
+  startJourney({ scroll: false });
 }
 
 // ─── Rail de progreso ───
