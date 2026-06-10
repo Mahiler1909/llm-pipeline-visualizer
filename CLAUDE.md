@@ -4,39 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Interactive browser-based LLM visualizer. Runs GPT-2 models in-browser via Transformers.js (ONNX) and renders the full pipeline on Canvas: Tokens → Embeddings → Transformer Layers → Logits → Sampling.
+«Anatomía de una predicción»: a scrollytelling, browser-based LLM explainer. Runs DistilGPT-2 in-browser via Transformers.js (ONNX) and walks the user through seven full-screen sections — Texto → Tokens → Embeddings → Atención → Logits → Muestreo → El bucle — each pairing Spanish educational prose with one live widget fed by real model data. The last section appends the sampled token and re-runs everything (autoregression made visible).
 
 ## Development
 
-No build system, bundler, or package manager. Open `index.html` directly or serve with any static server. Cache-busting is done via `?v=N` on the script tag in `index.html` — bump the number when changing JS.
+No build system, bundler, or package manager. Serve with any static server (`python3 -m http.server`). Cache-busting via `?v=N` on the script/style tags in `index.html` — bump when changing JS/CSS.
 
-Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1`). No local dependencies to install.
+Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1`). No local dependencies.
 
 ## Architecture
 
-**Data flow:** `app.js` orchestrates everything. User types text → `pipeline.js` calls `models.js` (tokenize + ONNX forward pass) → computes predictions with temperature/top-k/top-p → `viz.js` renders on Canvas.
+**Data flow:** `js/main.js` owns the central `state` (text, tokens, predictions, history, cycle) and orchestrates `runCycle(text)`: tokenize (works as soon as the tokenizer downloads, before the ONNX model finishes) → update front stages (tokens/embeddings/atención) → await model → `pipeline.run` → update back stages (logits/muestreo/bucle).
 
-**Key modules:**
-- `js/app.js` — Entry point. Wires DOM, manages state, handles educational content (INFO_CARDS with tagline/color for the context pill + Básico/Profundizar tabs rendered in the learn drawer), embedding/similarity/layer modals, autoregressive generation loop
-- `js/pipeline.js` — ML pipeline: tokenize → forward → sampling. Caches logits AND predictions so slider changes recompute without re-inference (`recomputePredictions()`). `getDistribution()` feeds the live sampling panel. `greedy` config makes sampling deterministic
-- `js/models.js` — Transformers.js wrapper. MODEL_CONFIGS defines 4 GPT-2 variants with metadata (layers, hidden_dim, heads, etc). `getEmbeddingVectorAsync()` returns the REAL wte row (via weights.js) with seeded-random fallback
-- `js/weights.js` — Fetches real weights from HF Hub via HTTP Range requests over the original `model.safetensors` (header parsed once, rows fetched on demand, ~3KB/token). ONNX repo IDs map to original repos in REPO_MAP
-- `js/attention.js` — Real layer-0 attention computed in JS: one-time fetch of ln_1 + c_attn weights (~7MB for GPT-2, persisted in Cache API), then wte+wpe → LayerNorm → QK → causal softmax per head
-- `js/sampling-panel.js` — Animated live distribution bar chart in the sidebar (top-20 candidates, top-k cut line, nucleus shading, ★ sampled token)
-- `js/viz.js` — Canvas rendering engine (largest file). Columns layout, glow animation loop, zoom/pan, hover zone detection, output probability bars, token travel animation, attention arcs on token hover, layer click callback
-- `js/config.js` — Reactive state store with pub/sub (`get`/`set`/`onChange`)
+**ML core (UI-agnostic, reusable):**
+- `js/models.js` — Transformers.js wrapper. MODEL_CONFIGS for 4 GPT-2 variants; the UI uses DistilGPT-2 fixed, with `?model=gpt2|gpt2-medium|gpt2-large` URL escape hatch. Note: `loadModel`'s `onProgress` reports phase `'model'` once the tokenizer is ready — `main.js` uses that to resolve `tokenizerReady` early.
+- `js/pipeline.js` — tokenize → forward → sampling. Caches logits so `recomputePredictions()` re-derives (and re-samples) without re-inference — this powers the sliders AND the «Muestrear» button. `getDistribution(n)` returns top-n by raw logit (stable order while sliding).
+- `js/weights.js` — real weight rows from HF Hub via HTTP Range requests over the original `model.safetensors` (REPO_MAP maps ONNX ids to original repos).
+- `js/attention.js` — real layer-0 attention computed in JS (~7MB one-time fetch, persisted in Cache API).
+- `js/config.js` — pub/sub store for temperature/topK/topP/greedy. `main.js` subscribes: any change → `recomputePredictions()` → update logits/muestreo/bucle.
 
-**CSS is modular:** `main.css` (layout + theme variables), `sidebar.css`, `viz.css`, `input.css`, `info-panel.css`. CSS variables defined in `:root` in `main.css`.
+**UI (one module per section):** each `js/stages/*.js` exports `init(rootEl, …)` and `update(state)`. Sliders/controls are built ONCE in `init` (re-rendering them mid-drag breaks the drag); `update` only refreshes data nodes. `js/stages/shared.js` has helpers (esc, tokenLabel with ␣, pastel palette, divergent color scale). `js/content.js` holds all educational prose as template functions receiving the model config.
 
 ## Key Patterns
 
-- **Hover zones in viz.js:** 5 zones (token, embedding, transformer, logit, sampling) detected by column x-position ranges. Triggers `onHoverZoneChange` callback → app.js shows a one-line context pill (`#zone-pill`, bottom-center); clicking it opens the persistent learn drawer (`#learn-drawer`, right side) with the full INFO_CARDS content. The drawer stays open and follows zone changes
-- **Sidebar:** `position: fixed` with `transform: translateX` for collapse animation. Body class `sidebar-hidden` toggles grid from `260px 1fr` to `0 1fr`
-- **Autoregressive generation:** Loop in `startAutoGenerate()` checks `autoGenAbort` flag between each async step. `animateTokenTravel()` returns a Promise for sequencing
-- **Embedding heatmap:** Floating tooltip uses the global `#tooltip` element (positioned in body) to escape sidebar's `overflow` clipping
-- **Welcome state:** Canvas shows welcome overlay until first `runPipeline()` call. Reset button restores it via `viz.clear()` + `hasGenerated = false`
-- **Config info icons:** Use `data-tooltip` attribute + JS mouseenter/mouseleave on `.config__info` elements, reusing `#tooltip` element
+- **No floating tooltips:** each widget has a fixed `.widget-caption` line that hover writes into.
+- **Lazy attention:** an IntersectionObserver on `#st-atencion` triggers the 7MB download only when the section approaches the viewport, with an inline progress bar.
+- **Scroll with fallback:** `scrollToSection()` in main.js tries smooth scrollIntoView, then after 700ms jumps instantly if not near the target (smooth scrolling can be disabled/cancelled by the environment or scroll anchoring during re-renders). Always use it instead of raw scrollIntoView.
+- **Async race guards:** embeddings/atención fetches use a request-id counter so stale responses don't overwrite newer renders.
+- **`hidden` vs CSS display:** any element styled with `display:flex/grid` needs an explicit `[hidden] { display:none }` rule (see `.context-bar`).
+- **Token cap on long texts:** atención shows the last 12 tokens, similarity matrix the last 10 unique; the sticky context bar always shows the full text (RTL-ellipsis trick keeps the end visible).
 
 ## UI Language
 
-All user-facing text is in **Spanish**. Info panel educational content, button labels, loading messages, and tooltips are all in Spanish.
+All user-facing text is in **Spanish** (with proper accents). Prompts/examples are in English because GPT-2 was trained on English.

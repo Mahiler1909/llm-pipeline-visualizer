@@ -3,253 +3,122 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Generative Workflow</title>
+  <title>Anatomía de una predicción — cómo un LLM elige la siguiente palabra</title>
+  <meta name="description" content="Un modelo de lenguaje real corre en tu navegador. Recorre paso a paso cómo decide la siguiente palabra: tokens, embeddings, atención, logits y muestreo.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/sidebar.css">
-  <link rel="stylesheet" href="css/viz.css">
-  <link rel="stylesheet" href="css/input.css">
-  <link rel="stylesheet" href="css/info-panel.css">
+  <link rel="stylesheet" href="css/style.css?v=1">
 </head>
 <body>
-  <!-- Loading overlay -->
-  <div class="loading-overlay" id="loading-overlay">
-    <div class="loading-overlay__content">
-      <div class="loading-overlay__icon">&#129504;</div>
-      <h2 class="loading-overlay__title" id="loading-title">Cargando modelo...</h2>
-      <div class="loading-overlay__bar-track">
-        <div class="loading-overlay__bar-fill" id="loading-bar"></div>
-      </div>
-      <p class="loading-overlay__text" id="loading-text">Inicializando...</p>
-      <p class="loading-overlay__hint">Esto solo ocurre la primera vez. El modelo se guarda en cache.</p>
+
+  <!-- Rail de progreso (izquierda) -->
+  <nav class="rail" id="rail" aria-label="Etapas del pipeline">
+    <button class="rail__dot" data-target="st-texto"><span class="rail__label">Texto</span></button>
+    <button class="rail__dot" data-target="st-tokens"><span class="rail__label">Tokens</span></button>
+    <button class="rail__dot" data-target="st-embeddings"><span class="rail__label">Embeddings</span></button>
+    <button class="rail__dot" data-target="st-atencion"><span class="rail__label">Atención</span></button>
+    <button class="rail__dot" data-target="st-logits"><span class="rail__label">Logits</span></button>
+    <button class="rail__dot" data-target="st-muestreo"><span class="rail__label">Muestreo</span></button>
+    <button class="rail__dot" data-target="st-bucle"><span class="rail__label">El bucle</span></button>
+  </nav>
+
+  <!-- Barra de contexto sticky: el texto sobre el que opera todo -->
+  <header class="context-bar" id="context-bar" hidden>
+    <div class="context-bar__text mono" id="context-text"></div>
+    <div class="context-bar__meta">
+      <span id="cycle-label">ciclo 1</span>
+      <span class="context-bar__status" id="model-status"></span>
     </div>
-  </div>
+  </header>
 
-  <!-- Sidebar open tab (visible when sidebar is hidden) -->
-  <button class="sidebar-tab" id="sidebar-open">&#9881;</button>
+  <main>
 
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar__top">
-      <div class="model-info">
-        <h2 class="model-info__name" id="model-name">GPT-2</h2>
-        <p class="model-info__meta" id="model-meta">12 capas &middot; 768d &middot; 124M params</p>
-      </div>
-      <button class="sidebar__close" id="sidebar-close" data-tooltip="Ocultar panel">&times;</button>
-    </div>
-
-    <div class="config" id="config">
-      <div class="config__group">
-        <label class="config__label">Modelo</label>
-        <select class="config__select" id="model-select">
-          <option value="onnx-community/distilgpt2-ONNX">DistilGPT-2 (82M)</option>
-          <option value="onnx-community/gpt2-ONNX" selected>GPT-2 (124M)</option>
-          <option value="onnx-community/gpt2-medium-ONNX">GPT-2 Medium (355M)</option>
-          <option value="onnx-community/gpt2-large-ONNX">GPT-2 Large (774M)</option>
-        </select>
-      </div>
-
-      <hr class="sidebar__divider">
-
-      <div class="config__group">
-        <div class="config__row">
-          <label class="config__label">Temperature
-            <span class="config__info" data-tooltip="Controla la aleatoriedad. Baja (0.1) = respuestas predecibles y repetitivas. Alta (2.0) = texto creativo y variado.">&#9432;</span>
-          </label>
-          <span class="config__value" id="temp-value">1.00</span>
+    <!-- §0 Texto (hero) -->
+    <section class="stage stage--hero" id="st-texto" data-stage="texto">
+      <div class="hero">
+        <p class="hero__kicker">Un modelo de lenguaje real corre en tu navegador</p>
+        <h1 class="hero__title">Anatomía de una predicción</h1>
+        <p class="hero__lead">
+          Cuando un modelo como ChatGPT escribe, no hace magia: convierte tu texto en números,
+          los procesa y elige la siguiente palabra. Aquí vas a recorrer ese camino paso a paso,
+          con un modelo real (DistilGPT-2) ejecutándose en esta página y datos reales en cada etapa.
+        </p>
+        <div class="hero__form">
+          <input type="text" class="hero__input mono" id="prompt-input"
+                 value="The capital of Spain is" autocomplete="off" spellcheck="false"
+                 aria-label="Texto de entrada">
+          <button class="btn btn--primary" id="btn-start">Comenzar el viaje ↓</button>
         </div>
-        <input type="range" class="config__slider" id="temp-slider" min="0.1" max="2" step="0.05" value="1">
-      </div>
-      <div class="config__group">
-        <div class="config__row">
-          <label class="config__label">Top K
-            <span class="config__info" data-tooltip="Limita a los K tokens mas probables. Menor K = mas enfocado, mayor K = mas diverso.">&#9432;</span>
-          </label>
-          <span class="config__value" id="topk-value">10</span>
+        <p class="hero__hint">El modelo fue entrenado en inglés — escribe tu frase en inglés, sin terminarla.</p>
+        <div class="hero__examples" id="hero-examples">
+          <button class="chip" data-prompt="The capital of Spain is">The capital of Spain is</button>
+          <button class="chip" data-prompt="Once upon a time, there was">Once upon a time, there was</button>
+          <button class="chip" data-prompt="The cat sat on the">The cat sat on the</button>
         </div>
-        <input type="range" class="config__slider" id="topk-slider" min="1" max="50" step="1" value="10">
+        <p class="hero__note" id="hero-note">
+          La primera vez se descarga el modelo (~350&nbsp;MB) en segundo plano; queda guardado en caché.
+          Las primeras etapas funcionan de inmediato.
+        </p>
       </div>
-      <div class="config__group">
-        <div class="config__row">
-          <label class="config__label">Top P
-            <span class="config__info" data-tooltip="Nucleus sampling: solo considera tokens cuya probabilidad acumulada no supere P. Complementa a Top-K.">&#9432;</span>
-          </label>
-          <span class="config__value" id="topp-value">0.90</span>
-        </div>
-        <input type="range" class="config__slider" id="topp-slider" min="0.1" max="1" step="0.05" value="0.9">
+    </section>
+
+    <!-- §1 Tokens -->
+    <section class="stage" id="st-tokens" data-stage="tokens">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="tokens"></div>
+        <div class="stage__widget" id="w-tokens"></div>
       </div>
+    </section>
 
-      <div class="config__group" id="dist-group" hidden>
-        <hr class="sidebar__divider">
-        <div class="config__row">
-          <label class="config__label">Siguiente token
-            <span class="config__info" data-tooltip="Los 20 mejores candidatos. Mueve los sliders y observa: temperature aplana o afila las barras, top-k corta (linea punteada) y top-p define el nucleus (zona ambar). La &#9733; es el elegido.">&#9432;</span>
-          </label>
-        </div>
-        <canvas class="config__dist" id="dist-canvas" width="480" height="300"></canvas>
-        <label class="config__toggle">
-          <input type="checkbox" id="greedy-toggle">
-          <span>Greedy: siempre el m&aacute;s probable</span>
-        </label>
+    <!-- §2 Embeddings -->
+    <section class="stage" id="st-embeddings" data-stage="embeddings">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="embeddings"></div>
+        <div class="stage__widget" id="w-embeddings"></div>
       </div>
-    </div>
+    </section>
 
-    <p class="sidebar__credit">GPT-2 real en tu navegador, v&iacute;a
-      <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
-    </p>
-  </aside>
-
-  <!-- Main area -->
-  <main class="main">
-    <!-- Visualization -->
-    <div class="viz" id="viz">
-      <div class="viz__graph" id="graph">
-        <canvas class="viz__canvas" id="network-canvas"></canvas>
+    <!-- §3 Atención -->
+    <section class="stage" id="st-atencion" data-stage="atencion">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="atencion"></div>
+        <div class="stage__widget" id="w-atencion"></div>
       </div>
-    </div>
+    </section>
 
-    <!-- Welcome state -->
-    <div class="welcome-state" id="welcome-state" hidden>
-      <div class="welcome-state__icon">&#129504;</div>
-      <h2 class="welcome-state__title">Mira pensar a un modelo de lenguaje</h2>
-      <p class="welcome-state__text">GPT-2 corre dentro de tu navegador. Escribe un prompt o elige uno y observa el camino completo hasta la siguiente palabra.</p>
-      <div class="welcome-state__flow">Texto &rarr; Tokens &rarr; Embeddings &rarr; Transformer &rarr; Logits &rarr; Sampling</div>
-      <div class="welcome-state__examples">
-        <button class="welcome-state__example" data-prompt="The capital of Spain is">The capital of Spain is&hellip;</button>
-        <button class="welcome-state__example" data-prompt="Once upon a time, there was">Once upon a time&hellip;</button>
-        <button class="welcome-state__example" data-prompt="The meaning of life is">The meaning of life is&hellip;</button>
+    <!-- §4 Logits -->
+    <section class="stage" id="st-logits" data-stage="logits">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="logits"></div>
+        <div class="stage__widget" id="w-logits"></div>
       </div>
-    </div>
+    </section>
 
-    <!-- Zoom controls -->
-    <div class="zoom-controls">
-      <button class="zoom-btn" id="zoom-in" title="Acercar">+</button>
-      <button class="zoom-btn" id="zoom-out" title="Alejar">&minus;</button>
-      <button class="zoom-btn" id="zoom-reset" title="Centrar">&#8635;</button>
-    </div>
-
-    <!-- Context pill: one line about the hovered stage -->
-    <button class="zone-pill" id="zone-pill" hidden>
-      <span class="zone-pill__dot" id="zone-pill-dot"></span>
-      <span class="zone-pill__title" id="zone-pill-title"></span>
-      <span class="zone-pill__tag" id="zone-pill-tag"></span>
-      <span class="zone-pill__cta">Saber m&aacute;s</span>
-    </button>
-
-    <!-- Learn drawer: full educational card, opens on demand -->
-    <aside class="learn-drawer" id="learn-drawer" hidden>
-      <div class="learn-drawer__header">
-        <span class="learn-drawer__icon" id="info-icon"></span>
-        <span class="learn-drawer__title" id="info-title"></span>
-        <button class="learn-drawer__close" id="learn-close">&times;</button>
+    <!-- §5 Muestreo -->
+    <section class="stage" id="st-muestreo" data-stage="muestreo">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="muestreo"></div>
+        <div class="stage__widget" id="w-muestreo"></div>
       </div>
-      <div class="learn-drawer__body" id="info-body"></div>
-    </aside>
+    </section>
+
+    <!-- §6 El bucle -->
+    <section class="stage" id="st-bucle" data-stage="bucle">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="bucle"></div>
+        <div class="stage__widget" id="w-bucle"></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>DistilGPT-2 real en tu navegador, vía
+        <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
+        · pesos reales descargados de
+        <a href="https://huggingface.co/distilbert/distilgpt2" target="_blank" rel="noopener">HuggingFace&nbsp;Hub</a>
+      </p>
+    </footer>
+
   </main>
 
-  <!-- Bottom input area -->
-  <div class="input-area" id="input-area">
-    <div class="input-area__tokens" id="input-tokens"></div>
-    <div class="input-area__row">
-      <div class="input-area__field">
-        <input type="text" class="input-area__input" id="query-input" placeholder="Escribe tu prompt aqu&iacute;..." value="The capital of Spain is" autocomplete="off">
-        <span class="input-area__count" id="token-count">0 tokens</span>
-      </div>
-      <button class="input-area__btn input-area__btn--generate" id="generate-btn">Generar</button>
-      <div class="input-area__icons">
-        <button class="input-area__icon-btn" id="more-btn" disabled data-tooltip="A&ntilde;adir el token elegido (&#9733;) y volver a generar">+1</button>
-        <button class="input-area__icon-btn" id="auto-btn" disabled data-tooltip="Generar 8 tokens autom&aacute;ticamente">&#9654;</button>
-        <button class="input-area__icon-btn" id="sim-btn" disabled data-tooltip="Similitud coseno entre los embeddings del prompt">&#8862;</button>
-        <button class="input-area__icon-btn" id="reset-btn" data-tooltip="Limpiar todo">&#8635;</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tooltip -->
-  <div class="tooltip" id="tooltip" hidden></div>
-  <!-- Heatmap tooltip -->
-  <div class="tooltip" id="heatmap-tooltip" hidden></div>
-
-  <!-- Embedding modal -->
-  <div class="modal-overlay" id="embedding-modal" hidden>
-    <div class="modal">
-      <div class="modal__header">
-        <h3 class="modal__title">Vector de &quot;<span id="modal-token-text"></span>&quot;</h3>
-        <span class="modal__badge" id="modal-token-id">ID: 0</span>
-        <span class="modal__badge" id="modal-real-badge" hidden></span>
-        <button class="modal__close" id="modal-close">&times;</button>
-      </div>
-      <canvas class="modal__heatmap" id="modal-heatmap" width="384" height="384"></canvas>
-      <div class="modal__info">
-        <span>&#128161;</span>
-        <p id="modal-info-text"></p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Layer internals modal -->
-  <div class="modal-overlay" id="layer-modal" hidden>
-    <div class="modal modal--wide">
-      <div class="modal__header">
-        <h3 class="modal__title" id="layer-title">Interior de la capa 1</h3>
-        <span class="modal__badge" id="layer-badge" hidden></span>
-        <button class="modal__close" id="layer-close">&times;</button>
-      </div>
-
-      <div class="layer-diagram" id="layer-diagram">
-        <div class="ld__box">Entrada</div>
-        <span class="ld__arrow">&rarr;</span>
-        <div class="ld__box ld__box--ln">LayerNorm</div>
-        <span class="ld__arrow">&rarr;</span>
-        <div class="ld__box ld__box--attn" id="ld-attn">Multi-Head<br>Attention</div>
-        <span class="ld__arrow ld__arrow--res" title="Conexion residual: la entrada se suma a la salida">&oplus;</span>
-        <div class="ld__box ld__box--ln">LayerNorm</div>
-        <span class="ld__arrow">&rarr;</span>
-        <div class="ld__box ld__box--ffn" id="ld-ffn">FFN<br>768&rarr;3072&rarr;768</div>
-        <span class="ld__arrow ld__arrow--res" title="Conexion residual: la entrada se suma a la salida">&oplus;</span>
-        <div class="ld__box">Salida</div>
-      </div>
-
-      <div class="layer-progress" id="layer-progress" hidden>
-        <p class="layer-progress__text" id="layer-progress-text">Descargando pesos reales de la capa 1...</p>
-        <div class="loading-overlay__bar-track">
-          <div class="loading-overlay__bar-fill" id="layer-progress-bar"></div>
-        </div>
-      </div>
-
-      <div class="layer-attn" id="layer-attn" hidden>
-        <div class="layer-attn__controls">
-          <label class="layer-attn__label">Cabeza de atenci&oacute;n:
-            <select class="config__select layer-attn__select" id="head-select"></select>
-          </label>
-          <span class="layer-attn__hint">Fila = token que mira &middot; Columna = token mirado</span>
-        </div>
-        <canvas class="modal__heatmap modal__heatmap--smooth" id="attn-heatmap" width="460" height="460"></canvas>
-      </div>
-
-      <div class="modal__info">
-        <span>&#128161;</span>
-        <p id="layer-info-text"></p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Similarity modal -->
-  <div class="modal-overlay" id="similarity-modal" hidden>
-    <div class="modal modal--wide">
-      <div class="modal__header">
-        <h3 class="modal__title">Similitud coseno entre embeddings</h3>
-        <span class="modal__badge" id="sim-badge" hidden></span>
-        <button class="modal__close" id="sim-close">&times;</button>
-      </div>
-      <canvas class="modal__heatmap modal__heatmap--smooth" id="sim-canvas" width="460" height="460"></canvas>
-      <div class="modal__info">
-        <span>&#128161;</span>
-        <p id="sim-info-text">Cada celda compara dos tokens del prompt: rojo = significados cercanos (similitud alta), azul = opuestos, oscuro = sin relaci&oacute;n. La diagonal siempre es 1 (cada token comparado consigo mismo).</p>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="js/app.js?v=14"></script>
+  <script type="module" src="js/main.js?v=1"></script>
 </body>
 </html>
