@@ -12,7 +12,7 @@ export function init(rootEl) {
   root = rootEl;
   root.innerHTML = `
     <div class="token-flow" id="tok-flow"></div>
-    <span class="token-arrow">↓ para el modelo, tu frase es solo esto:</span>
+    <span class="token-arrow">↓ para el modelo, la frase es solo esto:</span>
     <div class="token-ids mono" id="tok-ids"></div>
     <p class="widget-caption" id="tok-caption">Pasa el cursor sobre un token para ver su ID.</p>
     <div class="token-play">

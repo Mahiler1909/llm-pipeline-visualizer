@@ -44,7 +44,7 @@ export function init(rootEl, { onNavigate, modelConfig }) {
           <span class="pmap__sub mono">${esc(ph.sub)}</span>
         </button>`).join('')}
     </div>
-    <p class="widget-caption">el camino que vas a recorrer · clic en una etapa para saltar</p>
+    <p class="widget-caption">el camino del recorrido · clic en una etapa para saltar</p>
     <div class="scale-section">
       <p class="sim-title">¿Qué tan "large"? · parámetros (escala logarítmica)</p>
       ${SIZES.map(s => `

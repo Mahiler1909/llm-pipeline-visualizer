@@ -31,15 +31,15 @@ const STAGES = [
   },
   {
     title: 'Inferencia',
-    tag: 'estás aquí',
+    tag: 'estamos aquí',
     here: true,
     rows: [
       ['tarea', 'usar el modelo: solo lectura'],
-      ['datos', 'tu prompt'],
+      ['datos', 'el prompt'],
       ['tiempo', 'milisegundos por token'],
       ['aprende', 'nada — pesos congelados'],
     ],
-    info: 'lo que hiciste hoy en esta página: una pasada hacia adelante por pesos congelados. El modelo no aprende nada de tu uso',
+    info: 'lo que ocurre en esta página: una pasada hacia adelante por pesos congelados. El modelo no aprende nada del uso',
   },
 ];
 

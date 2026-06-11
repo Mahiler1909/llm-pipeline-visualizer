@@ -12,7 +12,7 @@ You type a prompt once and walk down through twelve full-screen sections, each t
 
 The loop section appends the sampled token to your text and the whole page re-runs — autoregressive generation you can *feel*, one word per cycle. The closing sections cover where the weights come from (pre-training → fine-tuning → inference) and what an LLM is *not* (a live hallucination demo).
 
-Every section pairs its widget with a quotable **definition card**, a one-line **analogy**, plain-language prose, a collapsible «Profundizar» block with the actual formulas, an «En el mundo real» block connecting the concept to APIs and products, and a hands-on «Pruébalo» experiment.
+Every section is slide-like: a quotable **definition card**, three **keyword blocks**, a one-line **analogy**, a collapsible «Profundizar» block with the dense theory and formulas, a one-line «En el mundo real» connection to APIs and products, and a hands-on «Pruébalo» experiment. The full spoken narration lives in [`GUION.md`](GUION.md) — the presenter's script.
 
 ## Features
 
@@ -25,7 +25,7 @@ Every section pairs its widget with a quotable **definition card**, a one-line *
 - **Logits + softmax** — Top-15 candidates with raw logits and their *true* probabilities (softmax over the full 50k vocabulary, not renormalized); the temperature slider reshapes the bars instantly with no re-inference.
 - **Sampling roulette** — Surviving nucleus candidates as a stacked probability bar; top-k / top-p sliders visibly eliminate candidates; «Muestrear» re-rolls the dice on the same distribution; greedy toggle.
 - **The loop** — One button appends the chosen token and repeats the cycle, with a sticky context bar tracking the growing text and cycle count.
-- **Educational prose in Spanish** — Definition cards, analogies, real-world connections, formulas and hands-on experiments in every section.
+- **Educational content in Spanish** — Definition cards, keyword blocks, analogies, real-world connections, formulas and hands-on experiments in every section; a full presenter script in `GUION.md`.
 - **Shareable journeys** — The prompt is encoded in the URL (`?p=…`), so any walkthrough can be sent as a link.
 - **Presentation mode** — Add `?presentar` to the URL (or press `P`) and the content reveals step by step with a fade, advancing with Space / arrow keys / a presenter clicker (PageDown). Widgets stay fully interactive for live demos; press `P` or `Esc` to exit.
 

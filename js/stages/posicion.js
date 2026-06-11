@@ -23,7 +23,7 @@ let lastState = null;
 export function init(rootEl) {
   root = rootEl;
   root.innerHTML = `
-    <p class="sim-title" style="margin-top:0">elige un token de tu texto…</p>
+    <p class="sim-title" style="margin-top:0">elige un token del texto…</p>
     <div class="emb-chips" id="pos-token-chips"></div>
     <p class="sim-title">…y una posición</p>
     <div class="emb-chips" id="pos-pos-chips"></div>

@@ -31,7 +31,7 @@ export function init(rootEl) {
         ${PRESETS.map(p => `<button class="chip" data-p="${esc(p)}">${esc(p)}</button>`).join('')}
       </div>
       <input type="text" class="hero__input mono hallu-input" id="hallu-input"
-             placeholder="…o escribe el tuyo (en inglés, sin terminar la frase)" autocomplete="off" spellcheck="false">
+             placeholder="…o escribe otro (en inglés, sin terminar la frase)" autocomplete="off" spellcheck="false">
       <p class="sim-title" id="hallu-prompt" hidden></p>
       <div class="hallu-rows" id="hallu-rows"></div>
       <p class="widget-caption" id="hallu-caption">Elige un prompt: hechos futuros, discutibles o capitales con trampa.</p>

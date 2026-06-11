@@ -224,6 +224,14 @@ details.deeper p { margin: 0.8rem 0; }
   color: var(--accent);
 }
 
+.hero__author {
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 2.4rem;
+}
+
 /* ─── Hero ─── */
 
 .stage--hero { padding-left: 24px; }
@@ -813,6 +821,20 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .definicion__term { font-weight: 700; }
+
+/* Bloques de palabras clave (formato slide) */
+.puntos { display: flex; flex-direction: column; gap: 12px; margin: 0 0 1.4rem; }
+
+.punto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 2px solid var(--hairline);
+  padding: 3px 0 3px 14px;
+}
+
+.punto__k { font-size: 17px; font-weight: 650; color: var(--ink); line-height: 1.35; }
+.punto__d { font-size: 14px; color: var(--muted); }
 
 .analogia {
   font-style: italic;

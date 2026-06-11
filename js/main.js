@@ -110,26 +110,31 @@ function scrollToSection(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.scrollIntoView({ behavior: 'smooth' });
-  setTimeout(() => {
-    // Si el smooth no llegó (animaciones deshabilitadas o canceladas
-    // por re-renders/scroll anchoring), saltar directo al destino.
+  // Si el smooth no llegó (animaciones deshabilitadas, canceladas por
+  // re-renders/scroll anchoring, o timers retrasados por el boot del modelo
+  // bloqueando el hilo), saltar directo. Se re-verifica varias veces porque
+  // una actualización posterior puede volver a mover la página.
+  let checks = 0;
+  const verify = () => {
     if (Math.abs(el.getBoundingClientRect().top) > 120) {
       el.scrollIntoView({ behavior: 'instant' });
     }
-  }, 700);
+    if (++checks < 3) setTimeout(verify, 800);
+  };
+  setTimeout(verify, 700);
 }
 
 // ─── Ciclo del pipeline ───
 
 let runSeq = 0;
 
-async function runCycle(text, { scrollToTokens = false } = {}) {
+async function runCycle(text, { scrollTo = null } = {}) {
   const seq = ++runSeq;
   state.text = text;
   ensureModelLoading();
-  if (scrollToTokens) {
+  if (scrollTo) {
     // Antes de actualizar el DOM: los re-renders async cancelan el smooth scroll
-    scrollToSection('st-tokens');
+    scrollToSection(scrollTo);
   }
 
   // Parte 1: etapas que solo necesitan el tokenizer + pesos por HTTP Range
@@ -177,7 +182,7 @@ async function acceptAndRepeat() {
   if (!res) return;
   state.history.push({ word: res.topWord, prob: sampled ? sampled.prob : 0, cycle: state.cycle });
   state.cycle += 1;
-  await runCycle(res.newText, { scrollToTokens: true });
+  await runCycle(res.newText, { scrollTo: 'st-tokens' });
 }
 
 // ─── Barra de contexto sticky ───
@@ -216,8 +221,9 @@ function startJourney({ scroll = true } = {}) {
   const url = new URL(location.href);
   url.searchParams.set('p', text);
   history.replaceState(null, '', url);
-  // En modo presentación el scroll lo dicta el avance de pasos, no el inicio
-  runCycle(text, { scrollToTokens: scroll && !presenter.isActive() });
+  // El viaje empieza en el primer slide (¿Qué es un LLM?); en modo
+  // presentación el scroll lo dicta el avance de pasos, no el inicio.
+  runCycle(text, { scrollTo: scroll && !presenter.isActive() ? 'st-llm' : null });
 }
 
 // Llegada por permalink: precargar el prompt y arrancar sin scroll

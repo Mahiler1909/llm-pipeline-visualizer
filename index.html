@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anatomía de una predicción — cómo un LLM elige la siguiente palabra</title>
-  <meta name="description" content="Un modelo de lenguaje real corre en tu navegador. Recorre paso a paso cómo decide la siguiente palabra: tokens, embeddings, atención, logits y muestreo.">
+  <meta name="description" content="Un modelo de lenguaje real corre en el navegador. Recorrido paso a paso de cómo decide la siguiente palabra: tokens, embeddings, atención, logits y muestreo.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 
@@ -40,20 +40,21 @@
     <!-- §0 Texto (hero) -->
     <section class="stage stage--hero" id="st-texto" data-stage="texto">
       <div class="hero">
-        <p class="hero__kicker">Un modelo de lenguaje real corre en tu navegador</p>
+        <p class="hero__kicker">Un modelo de lenguaje real corre en este navegador</p>
         <h1 class="hero__title">Anatomía de una predicción</h1>
         <p class="hero__lead">
-          Cuando un modelo como ChatGPT escribe, no hace magia: convierte tu texto en números,
-          los procesa y elige la siguiente palabra. Aquí vas a recorrer ese camino paso a paso,
+          Cuando un modelo como ChatGPT escribe, no hace magia: convierte un texto en números,
+          los procesa y elige la siguiente palabra. Un recorrido paso a paso por ese camino,
           con un modelo real (DistilGPT-2) ejecutándose en esta página y datos reales en cada etapa.
         </p>
+        <p class="hero__author">Fernando Chullo Mamani</p>
         <div class="hero__form">
           <input type="text" class="hero__input mono" id="prompt-input"
                  value="The capital of Spain is" autocomplete="off" spellcheck="false"
                  aria-label="Texto de entrada">
           <button class="btn btn--primary" id="btn-start">Comenzar el viaje ↓</button>
         </div>
-        <p class="hero__hint">El modelo fue entrenado en inglés — escribe tu frase en inglés, sin terminarla.</p>
+        <p class="hero__hint">El modelo fue entrenado en inglés — la frase va en inglés, sin terminarla.</p>
         <div class="hero__examples" id="hero-examples">
           <button class="chip" data-prompt="The capital of Spain is">The capital of Spain is</button>
           <button class="chip" data-prompt="Once upon a time, there was">Once upon a time, there was</button>
@@ -161,7 +162,7 @@
         <a href="https://jalammar.github.io/illustrated-transformer/" target="_blank" rel="noopener">The Illustrated Transformer</a> ·
         <a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Attention Is All You Need</a>
       </p>
-      <p>DistilGPT-2 real en tu navegador, vía
+      <p>Creado por Fernando Chullo Mamani · DistilGPT-2 real en el navegador, vía
         <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
         · pesos reales descargados de
         <a href="https://huggingface.co/distilbert/distilgpt2" target="_blank" rel="noopener">HuggingFace&nbsp;Hub</a>
@@ -170,6 +171,6 @@
 
   </main>
 
-  <script type="module" src="js/main.js?v=4"></script>
+  <script type="module" src="js/main.js?v=5"></script>
 </body>
 </html>

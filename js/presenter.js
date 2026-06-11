@@ -64,6 +64,7 @@ function collectSteps() {
     push([prose.querySelector('.kicker'), prose.querySelector('h2')], true);
     push([prose.querySelector('.definicion')]);
     push([widget]);
+    prose.querySelectorAll('.punto').forEach(p => push([p]));
     push([prose.querySelector('.analogia')]);
     [...prose.children]
       .filter(el => el.matches('p') && !el.matches('.kicker, .tryit, .analogia'))
