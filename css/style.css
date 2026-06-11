@@ -218,7 +218,7 @@ details.deeper p { margin: 0.8rem 0; }
 }
 
 .tryit::before {
-  content: "Pruébalo: ";
+  content: "Demo en vivo: ";
   font-style: normal;
   font-weight: 650;
   color: var(--accent);
@@ -869,7 +869,18 @@ input[type="range"]::-moz-range-thumb {
 }
 .mini-table td.mono { color: var(--ink); font-size: 13px; }
 
-/* ─── §¿Qué es un LLM?: mapa del pipeline + escala de tamaños ─── */
+/* ─── §¿Qué es un LLM? + §El pipeline ─── */
+
+.bigformula {
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 1.4rem 1rem;
+  text-align: center;
+  font-size: 21px;
+  color: var(--ink);
+  margin-bottom: 0.6rem;
+}
 
 .pmap { display: flex; flex-direction: column; gap: 6px; max-width: 440px; }
 

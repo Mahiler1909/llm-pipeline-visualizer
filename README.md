@@ -6,9 +6,9 @@ Interactive, scrollytelling-style explainer that shows step by step how a Large 
 
 ## What it does
 
-You type a prompt once and walk down through twelve full-screen sections, each teaching exactly one concept with one live widget:
+You type a prompt once and walk down through thirteen full-screen sections — definition first, then the concepts one by one, then the full pipeline in action:
 
-**Texto → ¿Qué es un LLM? → Tokens → Embeddings → Posición → Atención → El bloque transformer → Logits → Muestreo → El bucle → Entrenamiento → Límites**
+**Texto → ¿Qué es un LLM? → Conceptos (Tokens · Embeddings · Posición · Atención · El bloque · Entrenamiento) → El pipeline → Logits → Muestreo → El bucle → Límites**
 
 The loop section appends the sampled token to your text and the whole page re-runs — autoregressive generation you can *feel*, one word per cycle. The closing sections cover where the weights come from (pre-training → fine-tuning → inference) and what an LLM is *not* (a live hallucination demo).
 
@@ -66,9 +66,9 @@ Open `http://localhost:8080` in your browser.
 │   ├── main.js             # Orchestrator: state, model boot, autoregressive cycle
 │   ├── content.js          # Educational prose (Spanish), templated on model config
 │   ├── presenter.js        # Presentation mode (?presentar / P key)
-│   ├── stages/             # One UI module per section (llm, tokens, embeddings,
-│   │                       #   posicion, atencion, bloque, logits, muestreo,
-│   │                       #   bucle, entrenamiento, limites, shared helpers)
+│   ├── stages/             # One UI module per section (llm, pipeline-map, tokens,
+│   │                       #   embeddings, posicion, atencion, bloque, logits,
+│   │                       #   muestreo, bucle, entrenamiento, limites, shared)
 │   ├── pipeline.js         # Tokenize → infer → sample (+ stable distribution)
 │   ├── models.js           # Model loading via Transformers.js
 │   ├── weights.js          # Real weights via Range requests over safetensors

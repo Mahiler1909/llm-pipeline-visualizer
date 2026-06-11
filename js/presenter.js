@@ -15,6 +15,7 @@ const SECTION_LABELS = {
   posicion: 'Posición',
   atencion: 'Atención',
   bloque: 'El bloque',
+  pipeline: 'El pipeline',
   logits: 'Logits',
   muestreo: 'Muestreo',
   bucle: 'El bucle',

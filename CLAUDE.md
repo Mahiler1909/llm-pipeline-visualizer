@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-«Anatomía de una predicción»: a scrollytelling, browser-based LLM explainer. Runs DistilGPT-2 in-browser via Transformers.js (ONNX) and walks the user through twelve full-screen sections — Texto → ¿Qué es un LLM? → Tokens → Embeddings → Posición → Atención → El bloque transformer → Logits → Muestreo → El bucle → Entrenamiento → Límites — each pairing Spanish educational prose with one widget (live model data where possible, interactive diagrams for llm/bloque/entrenamiento). El bucle appends the sampled token and re-runs everything (autoregression made visible); Límites runs a live hallucination demo via its own `models.forward` (never through pipeline.js, to not clobber the journey's cached logits).
+«Anatomía de una predicción»: a scrollytelling, browser-based presentation on WHAT AN LLM IS (theory → terminology → pipeline), built as live slides. Runs DistilGPT-2 in-browser via Transformers.js (ONNX). Narrative arc across thirteen full-screen sections: Texto (portada) → ¿Qué es un LLM? (definición) → Conceptos 1-6 (Tokens, Embeddings, Posición, Atención, El bloque, Entrenamiento) → El pipeline (map: «las piezas, juntas») → Logits → Muestreo → El bucle → Límites. Each pairs slide-style Spanish content with one widget (live model data where possible; interactive diagrams for llm/pipeline-map/bloque/entrenamiento). El bucle appends the sampled token and re-runs everything (autoregression made visible); Límites runs a live hallucination demo via its own `models.forward` (never through pipeline.js, to not clobber the journey's cached logits).
 
 ## Development
 

@@ -16,7 +16,7 @@
 
 export const PROSE = {
   llm: {
-    step: 'Antes de empezar · ¿Qué es un LLM?',
+    step: 'Definición · ¿Qué es un LLM?',
     title: 'Una sola tarea: predecir lo que sigue',
     term: 'LLM (Large Language Model)',
     def: (cfg) => `red neuronal con millones —o billones— de parámetros entrenada
@@ -42,11 +42,12 @@ export const PROSE = {
       GPT-3, GPT-4 y todo lo que siguió.</p>`,
     world: (cfg) => `
       <p>ChatGPT, Claude y Copilot son esta misma función, en bucle.</p>`,
-    tryIt: (cfg) => `Haz clic en cualquier etapa del mapa para saltar a ella.`,
+    tryIt: (cfg) => `Comparemos tamaños en la escala: ¿cuántas veces cabe este
+      modelo en GPT-3?`,
   },
 
   tokens: {
-    step: 'Paso 1 · Tokens',
+    step: 'Concepto 1 · Tokens',
     title: 'El texto se corta en piezas',
     term: 'token',
     def: (cfg) => `fragmento de texto —una palabra, un trozo de palabra o un
@@ -73,12 +74,13 @@ export const PROSE = {
     world: (cfg) => `
       <p>Las APIs cobran por token · el contexto se mide en tokens · en inglés,
       1 token ≈ ¾ de palabra.</p>`,
-    tryIt: (cfg) => `Escribe una palabra inventada como «tokenizometro» en el campo
-      de abajo y mira en cuántos pedazos la parte el tokenizer real.`,
+    tryIt: (cfg) => `Juguemos a crear tokens: inventen una palabra (como
+      «tokenizometro»), la escribimos abajo y vemos en cuántas piezas la corta el
+      tokenizer real, en vivo.`,
   },
 
   embeddings: {
-    step: 'Paso 2 · Embeddings',
+    step: 'Concepto 2 · Embeddings',
     title: 'Cada token se vuelve un vector con significado',
     term: 'embedding',
     def: (cfg) => `vector denso (aquí, ${cfg.hidden_dim} números) que representa
@@ -106,12 +108,12 @@ export const PROSE = {
     world: (cfg) => `
       <p>Búsqueda semántica, recomendadores y RAG = comparar embeddings por coseno
       (&gt;0.7 muy relacionado · &lt;0.3 ruido).</p>`,
-    tryIt: (cfg) => `Comienza de nuevo con «The king and the queen» — en la matriz
-      de similitud, ¿qué par sale más alto?`,
+    tryIt: (cfg) => `Probemos con «The king and the queen»: ¿qué par sale más alto
+      en la matriz de similitud?`,
   },
 
   posicion: {
-    step: 'Paso 3 · Posición',
+    step: 'Concepto 3 · Posición',
     title: 'El orden importa',
     term: 'embedding de posición',
     def: (cfg) => `vector aprendido que codifica «soy el token n.º k de la
@@ -134,12 +136,12 @@ export const PROSE = {
     world: (cfg) => `
       <p>La «ventana de contexto» (8k, 128k, 1M tokens) es esto: hasta qué posición
       sabe codificar el modelo.</p>`,
-    tryIt: (cfg) => `Cambia la posición en el widget: el vector del token no se
-      mueve, el de posición sí — y la suma cambia con él.`,
+    tryIt: (cfg) => `Movamos la posición con los chips: el vector del token queda
+      quieto, el de posición cambia — y la suma con él.`,
   },
 
   atencion: {
-    step: 'Paso 4 · Atención',
+    step: 'Concepto 4 · Atención',
     title: 'Cada token mira a los anteriores',
     term: 'atención (self-attention)',
     def: (cfg) => `mecanismo por el que cada token calcula cuánto le importa cada
@@ -168,12 +170,12 @@ export const PROSE = {
     world: (cfg) => `
       <p>El costo crece con el cuadrado de la longitud — por eso el contexto largo
       es caro (KV-cache, FlashAttention).</p>`,
-    tryIt: (cfg) => `Cambia de cabeza con los botones: cada una mira a tokens
-      distintos. Y haz clic en otro token para usarlo como punto de vista.`,
+    tryIt: (cfg) => `Cambiemos de cabeza con los botones (cada una mira distinto) y
+      de token (clic) para usar otro punto de vista.`,
   },
 
   bloque: {
-    step: 'Paso 5 · El bloque transformer',
+    step: 'Concepto 5 · El bloque transformer',
     title: 'La pieza que se repite',
     term: 'bloque transformer',
     def: (cfg) => `la unidad de cómputo del modelo — atención multi-cabeza + red
@@ -198,11 +200,12 @@ export const PROSE = {
     world: (cfg) => `
       <p>«70B de parámetros» o «120 capas» = cuántas veces se apila el bloque y
       cuán anchas son sus matrices.</p>`,
-    tryIt: (cfg) => `Pasa el cursor por cada pieza del diagrama para ver qué hace.`,
+    tryIt: (cfg) => `Recorramos el diagrama pieza por pieza — el texto de abajo
+      explica cada una.`,
   },
 
   logits: {
-    step: 'Paso 6 · Logits',
+    step: 'El pipeline · Logits',
     title: 'Un puntaje para cada palabra posible',
     term: 'logit',
     def: (cfg) => `puntaje crudo —un número sin escala— que el modelo asigna a
@@ -228,12 +231,12 @@ export const PROSE = {
     world: (cfg) => `
       <p>Los <span class="mono">logprobs</span> de las APIs son esto · el parámetro
       <span class="mono">temperature</span> es este divisor.</p>`,
-    tryIt: (cfg) => `Baja la temperatura a 0.1: una sola barra domina. Súbela a 2.0
-      y compara cómo se aplana la distribución.`,
+    tryIt: (cfg) => `Bajemos la temperatura a 0.1 (una sola barra domina) y
+      subámosla a 2.0 (todo se aplana).`,
   },
 
   muestreo: {
-    step: 'Paso 7 · Muestreo',
+    step: 'El pipeline · Muestreo',
     title: 'Elegir la siguiente palabra: azar controlado',
     term: 'muestreo (sampling)',
     def: (cfg) => `elegir el siguiente token al azar, ponderado por su
@@ -262,12 +265,12 @@ export const PROSE = {
         <tr><td>escritura creativa</td><td class="mono">T≈1.2</td></tr>
         <tr><td>tests reproducibles</td><td class="mono">greedy (T=0)</td></tr>
       </table>`,
-    tryIt: (cfg) => `Pulsa «Muestrear» varias veces: misma distribución, distinto
-      ganador. Activa «Greedy» y la ★ se queda quieta.`,
+    tryIt: (cfg) => `Muestreemos varias veces: misma distribución, distinto
+      ganador. Con «Greedy», la ★ se queda quieta.`,
   },
 
   bucle: {
-    step: 'Paso 8 · El bucle',
+    step: 'El pipeline · El bucle',
     title: 'La salida se vuelve entrada',
     term: 'generación autorregresiva',
     def: (cfg) => `el bucle donde el token elegido se añade al contexto y el
@@ -291,12 +294,12 @@ export const PROSE = {
     world: (cfg) => `
       <p>El «streaming» de ChatGPT es este bucle en vivo · el output se cobra por
       token porque cada token es una pasada completa.</p>`,
-    tryIt: (cfg) => `Repite el ciclo 3 veces con greedy y 3 veces sin greedy:
-      la primera secuencia es idéntica; la segunda, distinta.`,
+    tryIt: (cfg) => `Repitamos el ciclo varias veces y veamos crecer el texto en la
+      barra superior — con greedy la secuencia se vuelve determinista.`,
   },
 
   entrenamiento: {
-    step: 'Detrás de escena · Entrenamiento',
+    step: 'Concepto 6 · Entrenamiento',
     title: '¿De dónde salen los pesos?',
     term: 'pre-entrenamiento',
     def: (cfg) => `ajustar los millones (o billones) de parámetros del modelo para
@@ -320,8 +323,36 @@ export const PROSE = {
     world: (cfg) => `
       <p>De aquí salen la fecha de corte, que el chat de ayer no le enseñó nada, y
       las dos vías para conocimiento propio: RAG o fine-tuning.</p>`,
-    tryIt: (cfg) => `Recorre las tres etapas del diagrama y compara las escalas de
-      datos, tiempo y costo.`,
+    tryIt: (cfg) => `Comparemos las tres etapas del diagrama: datos, tiempo y
+      costo.`,
+  },
+
+  pipeline: {
+    step: 'El pipeline · Las piezas, juntas',
+    title: 'De un texto a la siguiente palabra',
+    term: 'pipeline de inferencia',
+    def: (cfg) => `la cadena completa que el modelo ejecuta en cada predicción:
+      texto → tokens → vectores (+posición) → ${cfg.layers} bloques transformer →
+      un puntaje por token → elegir uno → repetir.`,
+    points: (cfg) => [
+      ['ya conocemos todas las piezas', 'ahora, encadenadas de principio a fin'],
+      ['esto ocurre en cada token generado', 'milisegundos por pasada completa'],
+      ['faltan las tres etapas finales', 'logits → muestreo → el bucle'],
+    ],
+    analogy: (cfg) => `una línea de producción: entra texto crudo, cada estación
+      lo transforma, y sale una única palabra — lista para volver a entrar.`,
+    advanced: (cfg) => `
+      <div class="formula">texto → tokens → embeddings (+posición)
+→ × ${cfg.layers} bloques → logits → muestreo
+→ token nuevo → repetir</div>
+      <p>Las primeras cinco etapas ya las vimos como conceptos. Lo que sigue son
+      las tres últimas — donde el modelo pasa de representar a <em>decidir</em>:
+      puntuar candidatos, elegir uno y volver a empezar.</p>`,
+    world: (cfg) => `
+      <p>Cada token de cada respuesta de ChatGPT recorre exactamente esta
+      cadena.</p>`,
+    tryIt: (cfg) => `El mapa es clicable: saltemos a cualquier etapa para
+      repasarla.`,
   },
 
   limites: {

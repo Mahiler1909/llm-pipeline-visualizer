@@ -6,7 +6,7 @@
   <title>Anatomía de una predicción — cómo un LLM elige la siguiente palabra</title>
   <meta name="description" content="Un modelo de lenguaje real corre en el navegador. Recorrido paso a paso de cómo decide la siguiente palabra: tokens, embeddings, atención, logits y muestreo.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 
@@ -19,10 +19,11 @@
     <button class="rail__dot" data-target="st-posicion"><span class="rail__label">Posición</span></button>
     <button class="rail__dot" data-target="st-atencion"><span class="rail__label">Atención</span></button>
     <button class="rail__dot" data-target="st-bloque"><span class="rail__label">El bloque</span></button>
+    <button class="rail__dot" data-target="st-entrenamiento"><span class="rail__label">Entrenamiento</span></button>
+    <button class="rail__dot" data-target="st-pipeline"><span class="rail__label">El pipeline</span></button>
     <button class="rail__dot" data-target="st-logits"><span class="rail__label">Logits</span></button>
     <button class="rail__dot" data-target="st-muestreo"><span class="rail__label">Muestreo</span></button>
     <button class="rail__dot" data-target="st-bucle"><span class="rail__label">El bucle</span></button>
-    <button class="rail__dot" data-target="st-entrenamiento"><span class="rail__label">Entrenamiento</span></button>
     <button class="rail__dot" data-target="st-limites"><span class="rail__label">Límites</span></button>
   </nav>
 
@@ -115,7 +116,23 @@
       </div>
     </section>
 
-    <!-- §6 Logits -->
+    <!-- §Concepto 6: Entrenamiento -->
+    <section class="stage" id="st-entrenamiento" data-stage="entrenamiento">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="entrenamiento"></div>
+        <div class="stage__widget" id="w-entrenamiento"></div>
+      </div>
+    </section>
+
+    <!-- §El pipeline: las piezas, juntas -->
+    <section class="stage" id="st-pipeline" data-stage="pipeline">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="pipeline"></div>
+        <div class="stage__widget" id="w-pipeline"></div>
+      </div>
+    </section>
+
+    <!-- §Pipeline: Logits -->
     <section class="stage" id="st-logits" data-stage="logits">
       <div class="stage__inner">
         <div class="stage__prose" data-prose="logits"></div>
@@ -136,14 +153,6 @@
       <div class="stage__inner">
         <div class="stage__prose" data-prose="bucle"></div>
         <div class="stage__widget" id="w-bucle"></div>
-      </div>
-    </section>
-
-    <!-- §Detrás de escena: Entrenamiento -->
-    <section class="stage" id="st-entrenamiento" data-stage="entrenamiento">
-      <div class="stage__inner">
-        <div class="stage__prose" data-prose="entrenamiento"></div>
-        <div class="stage__widget" id="w-entrenamiento"></div>
       </div>
     </section>
 
@@ -171,6 +180,6 @@
 
   </main>
 
-  <script type="module" src="js/main.js?v=5"></script>
+  <script type="module" src="js/main.js?v=6"></script>
 </body>
 </html>

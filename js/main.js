@@ -10,6 +10,7 @@ import * as presenter from './presenter.js';
 import { renderProse } from './content.js';
 import { esc } from './stages/shared.js';
 import * as llmStage from './stages/llm.js';
+import * as pipelineMapStage from './stages/pipeline-map.js';
 import * as tokensStage from './stages/tokens.js';
 import * as embeddingsStage from './stages/embeddings.js';
 import * as posicionStage from './stages/posicion.js';
@@ -58,7 +59,8 @@ const promptInput = document.getElementById('prompt-input');
 // ─── Boot ───
 
 renderProse(state.modelConfig);
-llmStage.init(document.getElementById('w-llm'), { onNavigate: scrollToSection, modelConfig: state.modelConfig });
+llmStage.init(document.getElementById('w-llm'));
+pipelineMapStage.init(document.getElementById('w-pipeline'), { onNavigate: scrollToSection, modelConfig: state.modelConfig });
 tokensStage.init(document.getElementById('w-tokens'));
 embeddingsStage.init(document.getElementById('w-embeddings'));
 posicionStage.init(document.getElementById('w-posicion'));

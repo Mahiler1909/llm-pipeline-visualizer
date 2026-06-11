@@ -1,21 +1,10 @@
 /**
- * §Antes de empezar — ¿Qué es un LLM?
- * Widget A: mapa clicable del pipeline (navega a cada sección).
+ * §Definición — ¿Qué es un LLM?
+ * Widget A: la función en grande (P(siguiente token | contexto)).
  * Widget B: escala logarítmica de tamaños de modelos.
  */
 
 import { esc } from './shared.js';
-
-const PHASES = [
-  { target: 'st-tokens', num: '1', name: 'Tokens', sub: 'texto → IDs' },
-  { target: 'st-embeddings', num: '2', name: 'Embeddings', sub: 'IDs → vectores' },
-  { target: 'st-posicion', num: '3', name: 'Posición', sub: '+ orden' },
-  { target: 'st-atencion', num: '4', name: 'Atención', sub: 'entra el contexto' },
-  { target: 'st-bloque', num: '5', name: 'Bloque transformer', sub: 'atención + FFN' },
-  { target: 'st-logits', num: '6', name: 'Logits', sub: 'puntaje por token' },
-  { target: 'st-muestreo', num: '7', name: 'Muestreo', sub: 'elegir uno' },
-  { target: 'st-bucle', num: '↺', name: 'El bucle', sub: 'y vuelta a empezar' },
-];
 
 // Tamaños en parámetros (escala log10). Frontera: estimación pública.
 const SIZES = [
@@ -28,23 +17,16 @@ const SIZES = [
 
 let captionEl;
 
-export function init(rootEl, { onNavigate, modelConfig }) {
-  const blockLabel = `× ${modelConfig.layers}`;
-
+export function init(rootEl) {
   const LOG_MIN = 7.5, LOG_MAX = 12.4;
   const width = (p) =>
     Math.round(((Math.log10(p) - LOG_MIN) / (LOG_MAX - LOG_MIN)) * 100);
 
   rootEl.innerHTML = `
-    <div class="pmap" id="pmap">
-      ${PHASES.map(ph => `
-        <button class="pmap__item" data-target="${ph.target}">
-          <span class="pmap__num mono">${ph.num}</span>
-          <span class="pmap__name">${esc(ph.name)}${ph.target === 'st-bloque' ? ` <span class="mono pmap__mult">${blockLabel}</span>` : ''}</span>
-          <span class="pmap__sub mono">${esc(ph.sub)}</span>
-        </button>`).join('')}
-    </div>
-    <p class="widget-caption">el camino del recorrido · clic en una etapa para saltar</p>
+    <div class="bigformula mono">P( siguiente token | contexto )</div>
+    <p class="widget-caption" style="text-align:center">
+      "The cat sat on the …" → ¿mat? ¿sofa? ¿moon? — un puntaje para cada opción
+    </p>
     <div class="scale-section">
       <p class="sim-title">¿Qué tan "large"? · parámetros (escala logarítmica)</p>
       ${SIZES.map(s => `
@@ -57,10 +39,6 @@ export function init(rootEl, { onNavigate, modelConfig }) {
     </div>`;
 
   captionEl = rootEl.querySelector('#llm-caption');
-
-  rootEl.querySelectorAll('.pmap__item').forEach(btn => {
-    btn.addEventListener('click', () => onNavigate?.(btn.dataset.target));
-  });
 
   const base = SIZES[0].params;
   rootEl.querySelectorAll('.scale-row').forEach(row => {
