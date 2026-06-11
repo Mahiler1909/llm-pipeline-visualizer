@@ -185,6 +185,19 @@ export async function getEmbeddingRow(modelId, tokenId) {
 }
 
 /**
+ * Get the REAL positional embedding row (wpe.weight[position]).
+ * Cached in memory; ~3KB per position over the network.
+ */
+export async function getPositionalRow(modelId, position) {
+  const repo = repoFor(modelId);
+  const key = `${repo}:wpe:${position}`;
+  if (rowCache.has(key)) return rowCache.get(key);
+  const row = await getRows(modelId, 'wpe.weight', position, 1);
+  rowCache.set(key, row);
+  return row;
+}
+
+/**
  * Whether real weights are reachable for this model (repo mapped).
  * Network availability is only known after the first fetch attempt.
  */

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-«Anatomía de una predicción»: a scrollytelling, browser-based LLM explainer. Runs DistilGPT-2 in-browser via Transformers.js (ONNX) and walks the user through seven full-screen sections — Texto → Tokens → Embeddings → Atención → Logits → Muestreo → El bucle — each pairing Spanish educational prose with one live widget fed by real model data. The last section appends the sampled token and re-runs everything (autoregression made visible).
+«Anatomía de una predicción»: a scrollytelling, browser-based LLM explainer. Runs DistilGPT-2 in-browser via Transformers.js (ONNX) and walks the user through twelve full-screen sections — Texto → ¿Qué es un LLM? → Tokens → Embeddings → Posición → Atención → El bloque transformer → Logits → Muestreo → El bucle → Entrenamiento → Límites — each pairing Spanish educational prose with one widget (live model data where possible, interactive diagrams for llm/bloque/entrenamiento). El bucle appends the sampled token and re-runs everything (autoregression made visible); Límites runs a live hallucination demo via its own `models.forward` (never through pipeline.js, to not clobber the journey's cached logits).
 
 ## Development
 
@@ -19,13 +19,13 @@ Transformers.js is loaded from CDN (`cdn.jsdelivr.net/npm/@huggingface/transform
 **ML core (UI-agnostic, reusable):**
 - `js/models.js` — Transformers.js wrapper. MODEL_CONFIGS for 4 GPT-2 variants; the UI uses DistilGPT-2 fixed (fp16, ~165MB — fp32 is 313MB and q8 only saves to 226MB because embeddings stay fp32), with `?model=gpt2|gpt2-medium|gpt2-large` URL escape hatch. Note: `loadModel`'s `onProgress` reports phase `'model'` once the tokenizer is ready — `main.js` uses that to resolve `tokenizerReady` early.
 - `js/pipeline.js` — tokenize → forward → sampling. Caches logits so `recomputePredictions()` re-derives (and re-samples) without re-inference — this powers the sliders AND the «Muestrear» button. `getDistribution(n)` returns top-n by raw logit (stable order while sliding).
-- `js/weights.js` — real weight rows from HF Hub via HTTP Range requests over the original `model.safetensors` (REPO_MAP maps ONNX ids to original repos).
+- `js/weights.js` — real weight rows from HF Hub via HTTP Range requests over the original `model.safetensors` (REPO_MAP maps ONNX ids to original repos). `getEmbeddingRow` (wte) and `getPositionalRow` (wpe) share the same header/row cache.
 - `js/attention.js` — real layer-0 attention computed in JS (~7MB one-time fetch, persisted in Cache API).
 - `js/config.js` — pub/sub store for temperature/topK/topP/greedy. `main.js` subscribes: any change → `recomputePredictions()` → update logits/muestreo/bucle.
 
-**UI (one module per section):** each `js/stages/*.js` exports `init(rootEl, …)` and `update(state)`. Sliders/controls are built ONCE in `init` (re-rendering them mid-drag breaks the drag); `update` only refreshes data nodes. `js/stages/shared.js` has helpers (esc, tokenLabel with ␣, pastel palette, divergent color scale). `js/content.js` holds all educational prose as template functions receiving the model config.
+**UI (one module per section):** each `js/stages/*.js` exports `init(rootEl, …)` and `update(state)`. Sliders/controls are built ONCE in `init` (re-rendering them mid-drag breaks the drag); `update` only refreshes data nodes. `js/stages/shared.js` has helpers (esc, tokenLabel with ␣, pastel palette, divergent color scale). `js/content.js` holds all educational prose as template functions receiving the model config; every section has `term`/`def` (definition card), `analogy` («Piénsalo así:»), `basic`, `advanced` (Profundizar), `world` («En el mundo real») and `tryIt` — `renderProse` renders them in that DOM order.
 
-**Presentation mode (`js/presenter.js`):** activated via `?presentar` or the `P` key; reveals title → widget → paragraphs → Profundizar → Pruébalo per section (Space/arrows/PageDown advance, click only on dead zones). It ONLY toggles CSS classes (`.reveal`/`.reveal--shown`, visibility-based so layout is preserved) on stable structural elements — prose children and widget containers — which survive `update()` re-renders. Elements inside widgets marked `[data-reveal]` become their own final steps (e.g. the closing line in bucle).
+**Presentation mode (`js/presenter.js`):** activated via `?presentar` or the `P` key; reveals title → definición → widget → analogía → paragraphs → Profundizar → mundo real → Pruébalo per section (Space/arrows/PageDown advance, click only on dead zones). It ONLY toggles CSS classes (`.reveal`/`.reveal--shown`, visibility-based so layout is preserved) on stable structural elements — prose children and widget containers — which survive `update()` re-renders. Elements inside widgets marked `[data-reveal]` become their own final steps (e.g. the closing line in bucle).
 
 ## Key Patterns
 

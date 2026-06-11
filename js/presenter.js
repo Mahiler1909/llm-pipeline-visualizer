@@ -9,12 +9,17 @@
  */
 
 const SECTION_LABELS = {
+  llm: '¿Qué es un LLM?',
   tokens: 'Tokens',
   embeddings: 'Embeddings',
+  posicion: 'Posición',
   atencion: 'Atención',
+  bloque: 'El bloque',
   logits: 'Logits',
   muestreo: 'Muestreo',
   bucle: 'El bucle',
+  entrenamiento: 'Entrenamiento',
+  limites: 'Límites',
 };
 
 let steps = [];   // [{ els, section, sectionStart, label }]
@@ -39,8 +44,9 @@ export function init() {
 }
 
 /**
- * Orden de aparición por sección: título → widget → párrafos →
- * Profundizar → Pruébalo → remates marcados con [data-reveal] en el widget.
+ * Orden de aparición por sección: título → definición → widget → analogía →
+ * párrafos → Profundizar → En el mundo real → Pruébalo → remates marcados
+ * con [data-reveal] en el widget.
  */
 function collectSteps() {
   steps = [];
@@ -56,11 +62,14 @@ function collectSteps() {
     };
 
     push([prose.querySelector('.kicker'), prose.querySelector('h2')], true);
+    push([prose.querySelector('.definicion')]);
     push([widget]);
+    push([prose.querySelector('.analogia')]);
     [...prose.children]
-      .filter(el => el.matches('p') && !el.matches('.kicker, .tryit'))
+      .filter(el => el.matches('p') && !el.matches('.kicker, .tryit, .analogia'))
       .forEach(p => push([p]));
     push([prose.querySelector('details.deeper')]);
+    push([prose.querySelector('.mundo-real')]);
     push([prose.querySelector('.tryit')]);
     widget.querySelectorAll('[data-reveal]').forEach(el => push([el]));
   });

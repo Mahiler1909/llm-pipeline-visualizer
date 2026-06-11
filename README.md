@@ -6,22 +6,26 @@ Interactive, scrollytelling-style explainer that shows step by step how a Large 
 
 ## What it does
 
-You type a prompt once and walk down through seven full-screen sections, each teaching exactly one concept with one live widget:
+You type a prompt once and walk down through twelve full-screen sections, each teaching exactly one concept with one live widget:
 
-**Texto → Tokens → Embeddings → Atención → Logits → Muestreo → El bucle**
+**Texto → ¿Qué es un LLM? → Tokens → Embeddings → Posición → Atención → El bloque transformer → Logits → Muestreo → El bucle → Entrenamiento → Límites**
 
-The last section closes the loop: the sampled token is appended to your text and the whole page re-runs — autoregressive generation you can *feel*, one word per cycle.
+The loop section appends the sampled token to your text and the whole page re-runs — autoregressive generation you can *feel*, one word per cycle. The closing sections cover where the weights come from (pre-training → fine-tuning → inference) and what an LLM is *not* (a live hallucination demo).
+
+Every section pairs its widget with a quotable **definition card**, a one-line **analogy**, plain-language prose, a collapsible «Profundizar» block with the actual formulas, an «En el mundo real» block connecting the concept to APIs and products, and a hands-on «Pruébalo» experiment.
 
 ## Features
 
 - **Real in-browser inference** — DistilGPT-2 running via Transformers.js (ONNX), not a simulation. The model downloads in the background; the first sections work immediately with just the tokenizer.
 - **Tokens** — Your prompt split into real BPE pieces with their IDs, plus a live mini-tokenizer to try any word.
 - **Real embeddings** — The actual `wte` rows fetched on demand from the original safetensors via HTTP Range requests (~3KB per token), shown as a 48-dimension bar strip plus a cosine-similarity matrix between your tokens.
+- **Real positional embeddings** — The actual `wpe` rows, same Range-request trick: pick a token and a position and watch `wte[token] + wpe[position]` change — the reason "dog bites man" ≠ "man bites dog".
+- **Hallucination demo** — Curated prompts run live against the model: a frequent fact comes out at 72% confidence, an invented 2030 World Cup winner comes out of the same mechanism. The lesson teaches itself.
 - **Real layer-0 attention** — The ~7MB of layer-0 weights download lazily when you reach the section (persisted in the Cache API); one query row at a time, per-head or averaged, with percentages on the most-attended tokens.
 - **Logits + softmax** — Top-15 candidates with raw logits and their *true* probabilities (softmax over the full 50k vocabulary, not renormalized); the temperature slider reshapes the bars instantly with no re-inference.
 - **Sampling roulette** — Surviving nucleus candidates as a stacked probability bar; top-k / top-p sliders visibly eliminate candidates; «Muestrear» re-rolls the dice on the same distribution; greedy toggle.
 - **The loop** — One button appends the chosen token and repeats the cycle, with a sticky context bar tracking the growing text and cycle count.
-- **Educational prose in Spanish** — Each section pairs its widget with a plain-language explanation, a collapsible «Profundizar» block with the actual formulas, and a hands-on «Pruébalo» experiment.
+- **Educational prose in Spanish** — Definition cards, analogies, real-world connections, formulas and hands-on experiments in every section.
 - **Shareable journeys** — The prompt is encoded in the URL (`?p=…`), so any walkthrough can be sent as a link.
 - **Presentation mode** — Add `?presentar` to the URL (or press `P`) and the content reveals step by step with a fade, advancing with Space / arrow keys / a presenter clicker (PageDown). Widgets stay fully interactive for live demos; press `P` or `Esc` to exit.
 
@@ -57,12 +61,14 @@ Open `http://localhost:8080` in your browser.
 ## Structure
 
 ```
-├── index.html              # Single page: rail + sticky bar + 7 sections
+├── index.html              # Single page: rail + sticky bar + 12 sections
 ├── js/
 │   ├── main.js             # Orchestrator: state, model boot, autoregressive cycle
 │   ├── content.js          # Educational prose (Spanish), templated on model config
-│   ├── stages/             # One UI module per section (tokens, embeddings,
-│   │                       #   atencion, logits, muestreo, bucle, shared helpers)
+│   ├── presenter.js        # Presentation mode (?presentar / P key)
+│   ├── stages/             # One UI module per section (llm, tokens, embeddings,
+│   │                       #   posicion, atencion, bloque, logits, muestreo,
+│   │                       #   bucle, entrenamiento, limites, shared helpers)
 │   ├── pipeline.js         # Tokenize → infer → sample (+ stable distribution)
 │   ├── models.js           # Model loading via Transformers.js
 │   ├── weights.js          # Real weights via Range requests over safetensors

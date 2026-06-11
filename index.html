@@ -6,19 +6,24 @@
   <title>Anatomía de una predicción — cómo un LLM elige la siguiente palabra</title>
   <meta name="description" content="Un modelo de lenguaje real corre en tu navegador. Recorre paso a paso cómo decide la siguiente palabra: tokens, embeddings, atención, logits y muestreo.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
 
   <!-- Rail de progreso (izquierda) -->
   <nav class="rail" id="rail" aria-label="Etapas del pipeline">
     <button class="rail__dot" data-target="st-texto"><span class="rail__label">Texto</span></button>
+    <button class="rail__dot" data-target="st-llm"><span class="rail__label">¿Qué es un LLM?</span></button>
     <button class="rail__dot" data-target="st-tokens"><span class="rail__label">Tokens</span></button>
     <button class="rail__dot" data-target="st-embeddings"><span class="rail__label">Embeddings</span></button>
+    <button class="rail__dot" data-target="st-posicion"><span class="rail__label">Posición</span></button>
     <button class="rail__dot" data-target="st-atencion"><span class="rail__label">Atención</span></button>
+    <button class="rail__dot" data-target="st-bloque"><span class="rail__label">El bloque</span></button>
     <button class="rail__dot" data-target="st-logits"><span class="rail__label">Logits</span></button>
     <button class="rail__dot" data-target="st-muestreo"><span class="rail__label">Muestreo</span></button>
     <button class="rail__dot" data-target="st-bucle"><span class="rail__label">El bucle</span></button>
+    <button class="rail__dot" data-target="st-entrenamiento"><span class="rail__label">Entrenamiento</span></button>
+    <button class="rail__dot" data-target="st-limites"><span class="rail__label">Límites</span></button>
   </nav>
 
   <!-- Barra de contexto sticky: el texto sobre el que opera todo -->
@@ -61,6 +66,14 @@
       </div>
     </section>
 
+    <!-- §Antes de empezar: ¿Qué es un LLM? -->
+    <section class="stage" id="st-llm" data-stage="llm">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="llm"></div>
+        <div class="stage__widget" id="w-llm"></div>
+      </div>
+    </section>
+
     <!-- §1 Tokens -->
     <section class="stage" id="st-tokens" data-stage="tokens">
       <div class="stage__inner">
@@ -77,7 +90,15 @@
       </div>
     </section>
 
-    <!-- §3 Atención -->
+    <!-- §3 Posición -->
+    <section class="stage" id="st-posicion" data-stage="posicion">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="posicion"></div>
+        <div class="stage__widget" id="w-posicion"></div>
+      </div>
+    </section>
+
+    <!-- §4 Atención -->
     <section class="stage" id="st-atencion" data-stage="atencion">
       <div class="stage__inner">
         <div class="stage__prose" data-prose="atencion"></div>
@@ -85,7 +106,15 @@
       </div>
     </section>
 
-    <!-- §4 Logits -->
+    <!-- §5 El bloque transformer -->
+    <section class="stage" id="st-bloque" data-stage="bloque">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="bloque"></div>
+        <div class="stage__widget" id="w-bloque"></div>
+      </div>
+    </section>
+
+    <!-- §6 Logits -->
     <section class="stage" id="st-logits" data-stage="logits">
       <div class="stage__inner">
         <div class="stage__prose" data-prose="logits"></div>
@@ -101,7 +130,7 @@
       </div>
     </section>
 
-    <!-- §6 El bucle -->
+    <!-- §8 El bucle -->
     <section class="stage" id="st-bucle" data-stage="bucle">
       <div class="stage__inner">
         <div class="stage__prose" data-prose="bucle"></div>
@@ -109,7 +138,29 @@
       </div>
     </section>
 
+    <!-- §Detrás de escena: Entrenamiento -->
+    <section class="stage" id="st-entrenamiento" data-stage="entrenamiento">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="entrenamiento"></div>
+        <div class="stage__widget" id="w-entrenamiento"></div>
+      </div>
+    </section>
+
+    <!-- §Para terminar: Límites -->
+    <section class="stage" id="st-limites" data-stage="limites">
+      <div class="stage__inner">
+        <div class="stage__prose" data-prose="limites"></div>
+        <div class="stage__widget" id="w-limites"></div>
+      </div>
+    </section>
+
     <footer class="footer">
+      <p class="footer__refs"><strong>Para seguir aprendiendo:</strong>
+        <a href="https://www.youtube.com/watch?v=wjZofJX0v4M" target="_blank" rel="noopener">3Blue1Brown — But what is a GPT?</a> ·
+        <a href="https://www.youtube.com/watch?v=kCc8FmEb1nY" target="_blank" rel="noopener">Karpathy — Let's build GPT</a> ·
+        <a href="https://jalammar.github.io/illustrated-transformer/" target="_blank" rel="noopener">The Illustrated Transformer</a> ·
+        <a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Attention Is All You Need</a>
+      </p>
       <p>DistilGPT-2 real en tu navegador, vía
         <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noopener">Transformers.js</a>
         · pesos reales descargados de
@@ -119,6 +170,6 @@
 
   </main>
 
-  <script type="module" src="js/main.js?v=3"></script>
+  <script type="module" src="js/main.js?v=4"></script>
 </body>
 </html>

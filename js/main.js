@@ -9,12 +9,17 @@ import * as config from './config.js';
 import * as presenter from './presenter.js';
 import { renderProse } from './content.js';
 import { esc } from './stages/shared.js';
+import * as llmStage from './stages/llm.js';
 import * as tokensStage from './stages/tokens.js';
 import * as embeddingsStage from './stages/embeddings.js';
+import * as posicionStage from './stages/posicion.js';
 import * as atencionStage from './stages/atencion.js';
+import * as bloqueStage from './stages/bloque.js';
 import * as logitsStage from './stages/logits.js';
 import * as muestreoStage from './stages/muestreo.js';
 import * as bucleStage from './stages/bucle.js';
+import * as entrenamientoStage from './stages/entrenamiento.js';
+import * as limitesStage from './stages/limites.js';
 
 // ─── Modelo fijo (DistilGPT-2), con escape hatch ?model= ───
 
@@ -53,12 +58,17 @@ const promptInput = document.getElementById('prompt-input');
 // ─── Boot ───
 
 renderProse(state.modelConfig);
+llmStage.init(document.getElementById('w-llm'), { onNavigate: scrollToSection, modelConfig: state.modelConfig });
 tokensStage.init(document.getElementById('w-tokens'));
 embeddingsStage.init(document.getElementById('w-embeddings'));
+posicionStage.init(document.getElementById('w-posicion'));
 atencionStage.init(document.getElementById('w-atencion'), document.getElementById('st-atencion'));
+bloqueStage.init(document.getElementById('w-bloque'), state.modelConfig);
 logitsStage.init(document.getElementById('w-logits'));
 muestreoStage.init(document.getElementById('w-muestreo'), { onResample: refreshDerived });
 bucleStage.init(document.getElementById('w-bucle'), { onAccept: acceptAndRepeat });
+entrenamientoStage.init(document.getElementById('w-entrenamiento'));
+limitesStage.init(document.getElementById('w-limites'));
 presenter.init();
 
 // ─── Carga del modelo (tokenizer primero, ONNX en background) ───
@@ -130,6 +140,7 @@ async function runCycle(text, { scrollToTokens = false } = {}) {
   updateContextBar();
   tokensStage.update(state);
   embeddingsStage.update(state);
+  posicionStage.update(state);
   atencionStage.update(state);
 
   // Parte 2: etapas que necesitan el forward pass del modelo completo
@@ -145,6 +156,7 @@ async function runCycle(text, { scrollToTokens = false } = {}) {
   logitsStage.update(state);
   muestreoStage.update(state);
   bucleStage.update(state);
+  limitesStage.update(state);
 }
 
 /** Re-deriva predicciones de los mismos logits (sliders, re-muestreo). */
